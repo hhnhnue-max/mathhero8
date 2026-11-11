@@ -1,7 +1,7 @@
 // MATH HERO 8 - Bước 2: đăng ký/đăng nhập email + hồ sơ (tên, lớp, avatar) + game GV
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, increment, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
@@ -20,7 +20,7 @@ const TEACHER_EMAIL = "hhn.hnue@gmail.com";
 const errText = (e) => ERR[e.code] || `${e.code || "Lỗi"}: ${e.message}`;
 
 let me = null, prof = {}, profExists = false, role = "student", mode = "login", lastXP = null, saveTimer, tmpAvatar = null;
-let unsubUser, unsubGames, unsubStu, unsubLB, lbSig = "";
+let lbTimer, streakDone = false, unsubUser, unsubGames, unsubStu, unsubLB, lbSig = "";
 
 // ---------- Giao diện ----------
 const AV = [["bottts", "Rocket"], ["bottts", "Nova"], ["bottts", "Pixel"], ["adventurer", "Mai"], ["adventurer", "Nam"], ["adventurer", "Lan"],
@@ -124,9 +124,26 @@ $("a-go").onclick = async () => {
 $("a-reset").onclick = () => {
   const m = $("a-msg"), email = $("a-email").value.trim();
   if (!email) { m.className = "text-xs font-bold text-red-600"; return (m.textContent = "Nhập email trước, rồi bấm Quên mật khẩu."); }
-  sendPasswordResetEmail(auth, email).then(() => { m.className = "text-xs font-bold text-green-700"; m.textContent = "Đã gửi email đặt lại mật khẩu (kiểm tra cả thư rác)."; })
+  sendPasswordResetEmail(auth, email).then(() => { m.className = "text-xs font-bold text-green-700"; m.textContent = "Nếu email này đã đăng ký, em sẽ nhận thư trong vài phút. Hãy kiểm tra cả mục Thư rác (Spam), thư từ \"noreply@...firebaseapp.com\"."; })
     .catch((e) => { m.className = "text-xs font-bold text-red-600"; m.textContent = errText(e); });
 };
+
+// ---------- Chuỗi ngày học (khôi phục = 100 XP) ----------
+const STREAK_COST = 100;
+const dstr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+document.body.insertAdjacentHTML("beforeend", `<div id="streak-modal" class="fixed inset-0 z-[65] hidden items-center justify-center bg-slate-900/70 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl"><div class="text-5xl mb-2">🔥</div><h3 class="font-extrabold text-lg text-brand-700 mb-1">Em đã mất chuỗi học!</h3><p id="st-msg" class="text-sm text-slate-600 mb-4"></p><button id="st-restore" class="w-full bg-amber-400 text-brand-900 font-extrabold rounded-xl py-2.5 text-sm mb-2"></button><button id="st-reset" class="w-full bg-slate-100 font-bold rounded-xl py-2.5 text-sm">Không khôi phục, bắt đầu lại</button></div></div>`);
+async function checkStreak() {
+  if (streakDone || !me || !profExists || role === "teacher") return; streakDone = true;
+  const t = dstr(), ref = doc(db, "users", me.uid), s = prof.streak || 0, last = prof.lastDay, best = (n) => Math.max(prof.bestStreak || 0, n);
+  if (last === t) return;
+  if (!last || s <= 0) return updateDoc(ref, { streak: 1, lastDay: t, bestStreak: best(1) }).catch(() => {});
+  if (last === dstr(new Date(Date.now() - 864e5))) return updateDoc(ref, { streak: s + 1, lastDay: t, bestStreak: best(s + 1) }).catch(() => {});
+  const xp = lastXP ?? prof.xp ?? 0, can = xp >= STREAK_COST;
+  $("st-msg").innerHTML = `Chuỗi <b>${s} ngày</b> của em đã bị ngắt. Khôi phục bằng <b>${STREAK_COST} XP</b> để giữ chuỗi (hôm nay là ngày ${s + 1}), hoặc để chuỗi về 0 rồi tính hôm nay là ngày 1.${can ? "" : `<br><span class="text-red-600 font-bold">Em chưa đủ ${STREAK_COST} XP (đang có ${xp}).</span>`}`;
+  $("st-restore").textContent = `Khôi phục chuỗi (-${STREAK_COST} XP)`; $("st-restore").disabled = !can; $("st-restore").classList.toggle("opacity-40", !can); show("streak-modal", true);
+  $("st-restore").onclick = () => { show("streak-modal", false); updateDoc(ref, { streak: s + 1, lastDay: t, bestStreak: best(s + 1), xp: increment(-STREAK_COST) }).catch(() => {}); setXP(xp - STREAK_COST); };
+  $("st-reset").onclick = () => { show("streak-modal", false); updateDoc(ref, { streak: 1, lastDay: t }).catch(() => {}); };
+}
 
 // ---------- XP trực tuyến ----------
 const setXP = (n) => { lastXP = n; try { userXP = n; } catch (e) {} $("user-xp-top").innerText = `${n.toLocaleString()} XP`; };
@@ -163,10 +180,12 @@ function render() {
   hdrImg.src = okAvatar(prof.avatar);
   $("who").textContent = prof.name ? `${prof.name}${prof.cls ? " · " + prof.cls : ""}` : "";
   $("who").classList.toggle("hidden", !prof.name); $("who").classList.toggle("sm:block", !!prof.name);
+  $("side-who").textContent = me ? (role === "teacher" ? "Giáo viên: " : "HS: ") + (prof.name || me.email) + (role !== "teacher" && prof.cls ? " · " + prof.cls : "") : "Khách · chưa đăng nhập";
+  $("streak-n").textContent = role === "teacher" ? "GV" : (me ? prof.streak || 0 : 0) + " Ngày";
   window.dispatchEvent(new Event("mh-auth"));
 }
 onAuthStateChanged(auth, (u) => {
-  me = u; unsubUser?.(); unsubGames?.(); unsubStu?.(); unsubLB?.(); lbSig = "";
+  me = u; streakDone = false; unsubUser?.(); unsubGames?.(); unsubStu?.(); unsubLB?.(); lbSig = "";
   $("btn-auth").classList.toggle("hidden", !!u);
   $("btn-auth2-t").textContent = u ? "Bài học của em" : "Đăng nhập bằng email"; $("btn-auth2-i").className = "fa-solid " + (u ? "fa-book-open" : "fa-user");
   if (!u) { prof = {}; profExists = false; role = "student"; lastXP = null; render(); $("lb-list").innerHTML = `<p class="text-xs text-slate-500">Đăng nhập để xem bảng xếp hạng.</p>`; return; }
@@ -174,11 +193,11 @@ onAuthStateChanged(auth, (u) => {
     profExists = s.exists(); prof = s.data() || {}; role = prof.role === "teacher" || (u.email || "").toLowerCase() === TEACHER_EMAIL ? "teacher" : "student";
     if (role === "teacher") deleteDoc(doc(db, "leaderboard", u.uid)).catch(() => {});
     if (prof.xp != null && prof.xp !== lastXP) setXP(prof.xp);
-    render(); syncLB();
+    render(); syncLB(); checkStreak();
     if (profExists && !prof.name) openProfile();
   });
   listenLB();
 });
 
-window.MH = { db, auth, esc, okAvatar, errText, openAuth, state: () => ({ me, prof, role }), addXP: (n) => setXP((lastXP ?? prof.xp ?? 0) + n) };
-import("./learn.js?v=3").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
+window.MH = { db, auth, esc, okAvatar, errText, openAuth, state: () => ({ me, prof, role }), addXP: (n) => { setXP((lastXP ?? prof.xp ?? 0) + n); updateDoc(doc(db, "users", me.uid), { xp: increment(n) }).catch(() => {}); clearTimeout(lbTimer); lbTimer = setTimeout(syncLB, 600); } };
+import("./learn.js?v=4").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
