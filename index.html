@@ -91,37 +91,7 @@
                     <span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">x2 XP</span>
                 </div>
                 
-                <div class="space-y-1.5">
-                    <button onclick="loadExam('Đề Thi Ôn Tập Giữa Kỳ I', 45)" class="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 to-brand-500/10 hover:from-amber-500/20 hover:to-brand-500/20 border border-amber-200 transition flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shrink-0">
-                            <i class="fa-solid fa-file-pen"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-extrabold text-slate-900 text-xs truncate">Đề Ôn Giữa Kỳ I</h4>
-                            <p class="text-[10px] text-slate-500 font-semibold">45 Phút • 20 Câu trắc nghiệm</p>
-                        </div>
-                    </button>
-
-                    <button onclick="loadExam('Đề Thi Ôn Tập Cuối Kỳ I', 90)" class="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-brand-600/10 to-rose-600/10 hover:from-brand-600/20 border border-brand-200 transition flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black text-sm shrink-0">
-                            <i class="fa-solid fa-award"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-extrabold text-slate-900 text-xs truncate">Đề Thi Cuối Kỳ I</h4>
-                            <p class="text-[10px] text-slate-500 font-semibold">90 Phút • Thử thách chuẩn</p>
-                        </div>
-                    </button>
-                    
-                    <button onclick="loadExam('Đề Thi Ôn Tập Giữa Kỳ II', 45)" class="w-full text-left p-3 rounded-2xl bg-slate-50 border border-slate-200 opacity-60 transition flex items-center gap-3 cursor-not-allowed">
-                        <div class="w-9 h-9 rounded-xl bg-slate-300 text-slate-600 flex items-center justify-center font-black text-sm shrink-0">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-extrabold text-slate-700 text-xs truncate">Đề Ôn Giữa Kỳ II</h4>
-                            <p class="text-[10px] text-slate-400 font-semibold">Mở khóa ở HK2</p>
-                        </div>
-                    </button>
-                </div>
+                <div id="exam-side" class="space-y-1.5"><p class="px-3 text-[11px] text-slate-400">Đăng nhập để xem đề thi.</p></div>
             </div>
 
             <hr class="border-slate-100">
@@ -237,9 +207,9 @@
                         <i class="fa-solid fa-trophy"></i>
                     </div>
                     <h3 class="font-extrabold text-slate-900 text-lg mb-1">Đấu Trường Đề Thi</h3>
-                    <p class="text-xs text-slate-500 mb-4">Luyện tập bộ đề ôn thi Giữa kỳ I & Cuối kỳ I có bấm giờ tính điểm XP.</p>
-                    <button onclick="loadExam('Đề Thi Ôn Tập Giữa Kỳ I', 45)" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play"></i> Thi Thử Giữa Kỳ I
+                    <p class="text-xs text-slate-500 mb-4">Làm các đề thi cô đăng, có bấm giờ, tự chấm điểm và nhận x2 XP.</p>
+                    <button onclick="window.dispatchEvent(new Event('mh-exams'))" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Vào đấu trường đề thi
                     </button>
                 </div>
 
@@ -390,7 +360,7 @@
         function showSection(section) {
             const dashView = document.getElementById('dashboard-view');
             const quizView = document.getElementById('quiz-view');
-            ['chapter-view','teacher-view','progress-view','notes-view'].forEach(i => { const e = document.getElementById(i); if (e) e.classList.add('hidden'); });
+            ['chapter-view','teacher-view','progress-view','notes-view','exams-view'].forEach(i => { const e = document.getElementById(i); if (e) e.classList.add('hidden'); });
             
             if (section === 'dashboard') {
                 dashView.classList.remove('hidden');
@@ -486,6 +456,6 @@
             });
         }
     </script>
-<script type="module" src="./mh.js?v=9"></script>
+<script type="module" src="./mh.js?v=10"></script>
 </body>
 </html>

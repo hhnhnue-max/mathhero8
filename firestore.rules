@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isTeacher() {
+      return request.auth != null && (request.auth.token.email == 'hhn.hnue@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher');
+    }
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isTeacher());
+      allow create: if request.auth.uid == uid && (request.resource.data.role == 'student'
+        || (request.resource.data.role == 'teacher' && request.auth.token.email == 'hhn.hnue@gmail.com'));
+      allow update: if request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;   // HS không tự nâng quyền
+    }
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name','cls','school','avatar','xp','updatedAt'])
+        && request.resource.data.name.size() <= 60;
+      allow delete: if isTeacher();
+    }
+    match /qpub/{ch} {
+      allow read: if request.auth != null;
+      allow write: if isTeacher();
+    }
+    match /qdraft/{ch} {
+      allow read, write: if isTeacher();
+    }
+    match /notes/{id} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+    match /gamehtml/{id} {
+      allow read: if request.auth != null;
+      allow write: if isTeacher();
+    }
+    match /exams/{id} {
+      allow read: if request.auth != null && (resource.data.published == true || isTeacher());
+      allow write: if isTeacher();
+    }
+    match /games/{id} {
+      allow read: if request.auth != null;
+      allow write: if isTeacher();                             // HS không thể sửa/xoá
+    }
+  }
+}

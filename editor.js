@@ -1,12 +1,13 @@
 // MATH HERO 8 - Soạn câu hỏi cho giáo viên: sửa / thêm / xoá -> Lưu nháp -> Công bố cho HS
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const IN = "w-full border rounded-lg px-2 py-1.5 text-sm", clone = (o) => JSON.parse(JSON.stringify(o));
 const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
-export async function mount(root, { CH, norm, db, esc }) {
+export async function mount(root, { CH, norm, db, esc, exam }) {
   let id = 1, d = null, msg = "", pubAt = null;
   const take = (x) => ({ mcq: x.mcq, tf: x.tf, sa: x.sa });
   async function load(i, orig) {
+    if (exam) { const sn = await getDoc(doc(db, "exams", exam.id)); d = norm(clone(take(sn.data()))); pubAt = null; msg = ""; return paint(); }
     id = i; msg = "Đang tải..."; paint();
     const [dr, pb] = await Promise.all([getDoc(doc(db, "qdraft", String(i))), getDoc(doc(db, "qpub", String(i)))]);
     pubAt = pb.exists() ? pb.data().updatedAt : null;
@@ -25,6 +26,7 @@ export async function mount(root, { CH, norm, db, esc }) {
   async function save(publish) {
     const bad = check(); if (bad) { msg = "⚠️ " + bad; return paint(); }
     if (publish && !confirm("Công bố bộ câu hỏi Chương " + id + " cho tất cả học sinh?")) return;
+    if (exam) { try { await updateDoc(doc(db, "exams", exam.id), { ...pack(), ...(publish ? { published: true } : {}) }); msg = publish ? "✅ Đã công bố đề cho học sinh." : "💾 Đã lưu thay đổi."; } catch (x) { msg = "Lỗi: " + (x.code || x.message); } return paint(); }
     try { const p = pack(); await setDoc(doc(db, "qdraft", String(id)), p); if (publish) { await setDoc(doc(db, "qpub", String(id)), p); pubAt = p.updatedAt; } msg = publish ? "✅ Đã công bố. HS mở chương sẽ thấy bộ câu hỏi mới." : "💾 Đã lưu nháp (HS chưa thấy)."; }
     catch (e) { msg = "Lỗi: " + (e.code || e.message); } paint();
   }
@@ -32,7 +34,7 @@ export async function mount(root, { CH, norm, db, esc }) {
   const del = (p) => `<button data-del="${p}" class="text-xs text-red-600 border rounded-lg px-2 py-1">Xoá câu</button>`;
   function paint() {
     const y = scrollY; if (!d) return;
-    root.innerHTML = `<div class="flex flex-wrap items-center gap-2 mb-3"><select id="ed-ch" class="${IN} max-w-xs">${CH.map((c) => `<option value="${c.id}" ${c.id === id ? "selected" : ""}>Chương ${c.id}: ${esc(c.title)}</option>`).join("")}</select>
+    root.innerHTML = (exam ? `<div class="flex items-center gap-3 mb-3"><button id="ed-back" class="text-sm font-bold text-brand-600">← Về danh sách đề</button><b class="text-sm">${esc(exam.title)}</b></div>` : "") + `<div class="${exam ? "hidden " : ""}flex flex-wrap items-center gap-2 mb-3"><select id="ed-ch" class="${IN} max-w-xs">${CH.map((c) => `<option value="${c.id}" ${c.id === id ? "selected" : ""}>Chương ${c.id}: ${esc(c.title)}</option>`).join("")}</select>
      <button id="ed-orig" class="text-xs border rounded-lg px-2 py-1.5">Nạp lại bản gốc (Word)</button>
      <span class="text-xs text-slate-500">${pubAt ? "Đã công bố: " + new Date(pubAt).toLocaleString("vi-VN") : "Đang dùng bộ câu hỏi gốc từ file Word"}</span></div>
      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 mb-3">Sửa xong bấm <b>Lưu nháp</b> (HS chưa thấy) hoặc <b>Công bố</b> (HS thấy ngay). Xoá/sửa câu không làm mất XP HS đã nhận.</div>
@@ -53,7 +55,7 @@ export async function mount(root, { CH, norm, db, esc }) {
   root.onclick = (e) => { const t = e.target, a = t.dataset.add, r = t.dataset.del;
     if (a) { d[a].push(a === "mcq" ? { id: uid("m"), q: "", opts: ["", "", "", ""], ans: 0, exp: "" } : a === "tf" ? { id: uid("t"), q: "", items: [0, 1, 2, 3].map(() => ({ t: "", ans: true, exp: "" })) } : { id: uid("s"), q: "", ans: "", exp: "" }); paint(); }
     if (r && confirm("Xoá câu này?")) { const [k, i] = r.split("."); d[k].splice(+i, 1); paint(); }
-    if (t.id === "ed-save") save(false); if (t.id === "ed-pub") save(true);
+    if (t.id === "ed-back") exam.back(); if (t.id === "ed-save") save(false); if (t.id === "ed-pub") save(true);
     if (t.id === "ed-orig" && confirm("Nạp lại bản gốc từ file Word? Phần đang sửa trên màn hình sẽ mất (bản nháp đã lưu vẫn còn cho đến khi cô lưu lại).")) load(id, true); };
   await load(1);
 }

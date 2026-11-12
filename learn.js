@@ -4,14 +4,15 @@ import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12
 const { db, auth, esc, errText } = window.MH;
 const $ = (id) => document.getElementById(id);
 const st = () => window.MH.state();
-const VIEWS = ["dashboard-view", "quiz-view", "chapter-view", "teacher-view", "progress-view", "notes-view"];
+const VIEWS = ["dashboard-view", "quiz-view", "chapter-view", "teacher-view", "progress-view", "notes-view", "exams-view"];
 const openView = (id) => { if (!$("sidebar").classList.contains("-translate-x-full")) toggleSidebar(); VIEWS.forEach((v) => $(v).classList.toggle("hidden", v !== id)); scrollTo(0, 0); };
 const GROUPS = [["MẠCH ĐẠI SỐ", "fa-square-root-variable", [1, 2, 6, 7]], ["MẠCH HÌNH HỌC", "fa-shapes", [3, 4, 9, 10]], ["THỐNG KÊ & XÁC SUẤT", "fa-chart-column", [5, 8]]];
 const TABS = [["mcq", "Trắc nghiệm"], ["tf", "Đúng – Sai"], ["sa", "Trả lời ngắn"], ["game", "Game tương tác"]];
+const curCh = () => cur.ex || CH[cur.id - 1];
 const INP = "w-full border rounded-xl px-3 py-2 text-sm";
-let CH = [], cur = { id: 1, tab: "mcq" }, done = new Set(), GAMES = {}, unsubG, unsubT, tTab = "hs";
+let CH = [], cur = { id: 1, tab: "mcq" }, tm = null, done = new Set(), GAMES = {}, unsubG, unsubT, tTab = "hs";
 
-document.querySelector("main").insertAdjacentHTML("beforeend", `<section id="chapter-view" class="hidden space-y-4"></section><section id="teacher-view" class="hidden space-y-4"></section><section id="progress-view" class="hidden space-y-4"></section><section id="notes-view" class="hidden space-y-4"></section>`);
+document.querySelector("main").insertAdjacentHTML("beforeend", `<section id="chapter-view" class="hidden space-y-4"></section><section id="teacher-view" class="hidden space-y-4"></section><section id="progress-view" class="hidden space-y-4"></section><section id="notes-view" class="hidden space-y-4"></section><section id="exams-view" class="hidden space-y-4"></section>`);
 document.body.insertAdjacentHTML("beforeend", `<div id="game-modal" class="fixed inset-0 z-[70] hidden flex-col bg-slate-900"><div class="flex items-center justify-between p-3 bg-brand-700 text-white"><span id="game-title" class="font-extrabold text-sm"></span><button id="game-close" class="bg-white/20 rounded-xl px-3 py-1 text-sm font-bold">Đóng ✕</button></div><iframe id="game-frame" sandbox="allow-scripts allow-forms allow-popups allow-pointer-lock" class="flex-1 w-full bg-white"></iframe></div>`);
 $("btn-auth2").insertAdjacentHTML("afterend", `<button id="btn-notes" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 text-amber-800 font-extrabold text-sm border border-amber-200"><i class="fa-solid fa-clipboard-list"></i> Dặn dò của cô</button>`);
 $("sidebar").querySelector(".space-y-6").insertAdjacentHTML("afterbegin", `<button id="btn-teacher" class="hidden w-full items-center gap-3 px-4 py-3 rounded-2xl bg-amber-400 text-brand-900 font-extrabold text-sm"><i class="fa-solid fa-chalkboard-user"></i> Quản lý của cô</button>`);
@@ -56,20 +57,27 @@ function grade(ch) {
 const counts = (ch) => ({ mcq: { a: ch.mcq.filter((q) => A.m[q.id] != null).length, n: ch.mcq.length },
   tf: { a: ch.tf.reduce((s, q) => s + (A.t[q.id] || []).filter((v) => v != null).length, 0), n: ch.tf.reduce((s, q) => s + q.items.length, 0) },
   sa: { a: ch.sa.filter((q) => String(A.s[q.id] ?? "").trim()).length, n: ch.sa.length } });
-const tabsHTML = (ch) => { const c = counts(ch); return TABS.map(([k, l]) => `<button data-act="tab" data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === cur.tab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}${k !== "game" && !RES ? ` <span class="text-[10px] opacity-80">${c[k].a}/${c[k].n}</span>` : ""}</button>`).join(""); };
+const tabsHTML = (ch) => { const c = counts(ch); return TABS.filter(([k]) => !cur.ex || k !== "game").map(([k, l]) => `<button data-act="tab" data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === cur.tab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}${k !== "game" && !RES ? ` <span class="text-[10px] opacity-80">${c[k].a}/${c[k].n}</span>` : ""}</button>`).join(""); };
 const barHTML = (ch) => { if (cur.tab === "game") return ""; if (RES) return `<span class="text-xs text-slate-500">Kết quả đã được lưu.</span><button data-act="redo" class="bg-slate-100 font-bold rounded-xl px-4 py-2 text-sm">Làm lại (xoá kết quả cũ)</button>`;
   const c = counts(ch), a = c.mcq.a + c.tf.a + c.sa.a, n = c.mcq.n + c.tf.n + c.sa.n;
   return `<span class="text-xs font-bold text-slate-600">Đã trả lời ${a}/${n}</span><button data-act="submit" class="bg-brand-600 text-white font-extrabold rounded-xl px-5 py-2 text-sm">Nộp bài</button>`; };
-const refreshBar = () => { const ch = CH[cur.id - 1]; $("tabs").innerHTML = tabsHTML(ch); if ($("bar")) $("bar").innerHTML = barHTML(ch); };
+const refreshBar = () => { const ch = curCh(); $("tabs").innerHTML = tabsHTML(ch); if ($("bar")) $("bar").innerHTML = barHTML(ch); };
 const resultHTML = () => { const r = RES.sc, nm = ["Phần I · Trắc nghiệm", "Phần II · Đúng – Sai", "Phần III · Trả lời ngắn"];
   return `<div class="bg-gradient-to-br from-brand-700 to-brand-600 text-white rounded-3xl p-5"><div class="text-xs font-bold opacity-80">Kết quả đã nộp ${new Date(RES.at).toLocaleString("vi-VN")}${gain ? ` · <span class="text-yellow-300">+${gain} XP</span>` : ""}</div>
    <div class="text-3xl font-black">${f(r.tot)} / ${f(r.maxTot)} điểm</div><div class="grid grid-cols-3 gap-2 mt-3 text-center text-[11px]">${nm.map((t, k) => `<div class="bg-white/15 rounded-xl p-2"><div class="opacity-80">${t}</div><div class="font-black text-base">${f(r.p[k])}/${f(r.max[k])}</div></div>`).join("")}</div></div>`; };
 function renderChapter() {
-  unsubG?.(); const ch = CH[cur.id - 1], body = { mcq: mcqHTML, tf: tfHTML, sa: saHTML, game: () => `<div id="game-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>` }[cur.tab](ch), bar = barHTML(ch);
-  $("chapter-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700">Chương ${ch.id}: ${esc(ch.title)}</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500"><i class="fa-solid fa-house mr-1"></i>Trang chủ</button></div>
+  unsubG?.(); const ch = curCh(), body = { mcq: mcqHTML, tf: tfHTML, sa: saHTML, game: () => `<div id="game-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>` }[cur.tab](ch), bar = barHTML(ch);
+  $("chapter-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700">${cur.ex ? "🏆 " + esc(ch.title) : `Chương ${ch.id}: ${esc(ch.title)}`}</h2>${cur.ex && cur.ex.minutes && !RES ? `<span id="timer" class="font-black text-brand-700 bg-amber-100 rounded-full px-3 py-1 text-sm">⏱</span>` : ""}<button onclick="goHome()" class="text-sm font-bold text-slate-500"><i class="fa-solid fa-house mr-1"></i>Trang chủ</button></div>
    <div id="tabs" class="flex gap-2 flex-wrap">${tabsHTML(ch)}</div>${RES && cur.tab !== "game" ? resultHTML() : ""}<div class="space-y-3">${body}</div>
    ${bar ? `<div id="bar" class="sticky bottom-0 bg-white/95 border-t p-3 flex items-center justify-between rounded-t-2xl">${bar}</div>` : ""}`;
-  if (cur.tab === "game") listenGames(ch.id);
+  startTimer(); if (cur.tab === "game") listenGames(ch.id);
+}
+function startTimer() {
+  clearInterval(tm); if (!cur.ex || !cur.ex.minutes || RES || !cur.endAt) return;
+  const tick = () => { const el = $("timer"); if (!el) return clearInterval(tm); const left = Math.max(0, Math.round((cur.endAt - Date.now()) / 1000));
+    el.textContent = `⏱ ${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`; el.classList.toggle("bg-red-100", left < 300);
+    if (left <= 0) { clearInterval(tm); alert("Hết giờ! Bài làm được nộp tự động."); submit(true); } };
+  tick(); tm = setInterval(tick, 1000);
 }
 const card = (inner, id) => `<div ${id ? `id="${id}"` : ""} class="bg-white border border-slate-200 rounded-2xl p-4">${inner}</div>`;
 const EMPTY = `<p class="text-sm text-slate-500">Chương này chưa có câu hỏi dạng này.</p>`;
@@ -87,23 +95,24 @@ const saHTML = (ch) => ch.sa.map((q, k) => { const v = A.s[q.id] ?? "", ok = RES
   return card(`<div class="font-bold text-sm mb-2">Câu ${k + 1}. ${esc(q.q)}</div><input data-act="sain" data-id="${q.id}" value="${esc(v)}" ${RES ? "disabled" : ""} placeholder="Đáp số (vd: 2,5 hoặc 1/2)" class="${INP} max-w-[220px] ${RES ? (ok ? "bg-green-50" : "bg-red-50") : ""}">
    ${RES ? `<div class="text-xs mt-2">${ok ? "✅ Đúng" : `❌ Chưa đúng. Đáp số: <b>${esc(q.ans)}</b>`} <b class="text-brand-700">(+${f(ok ? 0.5 : 0)} điểm)</b>${q.exp ? `<div class="text-slate-600 mt-1">${esc(q.exp)}</div>` : ""}</div>` : ""}`); }).join("") || EMPTY;
 
-async function submit() {
-  const ch = CH[cur.id - 1], c = counts(ch), left = c.mcq.n - c.mcq.a + c.tf.n - c.tf.a + c.sa.n - c.sa.a;
-  if (left && !confirm(`Còn ${left} câu/ý chưa trả lời. Em vẫn muốn nộp bài?`)) return;
+async function submit(auto) {
+  clearInterval(tm);
+  const ch = curCh(), c = counts(ch), left = c.mcq.n - c.mcq.a + c.tf.n - c.tf.a + c.sa.n - c.sa.a;
+  if (left && !auto && !confirm(`Còn ${left} câu/ý chưa trả lời. Em vẫn muốn nộp bài?`)) return;
   const g = grade(ch), now = Date.now(), fresh = g.keys.filter(([k]) => !done.has(k)); fresh.forEach(([k]) => done.add(k));
   RES = JSON.parse(JSON.stringify({ a: A, sc: g.sc, at: now })); DRAFT[ch.id] = null;
-  const upd = { [`res.${ch.id}`]: RES, lastCh: ch.id, lastAt: now, [`seen.${ch.id}`]: now }; if (fresh.length) upd.done = arrayUnion(...fresh.map((x) => x[0]));
+  const upd = cur.ex ? { [`res.${ch.id}`]: RES, lastAt: now } : { [`res.${ch.id}`]: RES, lastCh: ch.id, lastAt: now, [`seen.${ch.id}`]: now }; if (fresh.length) upd.done = arrayUnion(...fresh.map((x) => x[0]));
   try { await updateDoc(doc(db, "users", st().me.uid), upd); } catch (e) { alert("Chưa lưu được kết quả lên hệ thống: " + errText(e)); }
-  gain = fresh.reduce((s, x) => s + x[1], 0); if (gain) window.MH.addXP(gain);
+  gain = fresh.reduce((s, x) => s + x[1], 0) * (cur.ex ? 2 : 1); if (gain) window.MH.addXP(gain);
   cur.tab = "mcq"; renderChapter(); scrollTo(0, 0);
 }
 async function redo() {
   if (!confirm("Làm lại sẽ XOÁ kết quả đã lưu của chương này. Em muốn làm lại?")) return;
-  RES = null; gain = 0; A = DRAFT[cur.id] = emptyA(); cur.tab = "mcq"; renderChapter(); scrollTo(0, 0);
+  RES = null; gain = 0; A = DRAFT[cur.id] = emptyA(); if (cur.ex) cur.endAt = cur.ex.minutes ? Date.now() + cur.ex.minutes * 60000 : 0; cur.tab = "mcq"; renderChapter(); scrollTo(0, 0);
   try { await updateDoc(doc(db, "users", st().me.uid), { [`res.${cur.id}`]: deleteField() }); } catch (e) {}
 }
 $("chapter-view").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-act]"); if (!b) return; const a = b.dataset.act, ch = CH[cur.id - 1], qid = b.dataset.id;
+  const b = e.target.closest("[data-act]"); if (!b) return; const a = b.dataset.act, ch = curCh(), qid = b.dataset.id;
   if (a === "tab") { cur.tab = b.dataset.t; renderChapter(); }
   else if (a === "submit") submit(); else if (a === "redo") redo();
   else if (a === "mc" && !RES) { A.m[qid] = +b.dataset.i; $(`q-${qid}`).querySelectorAll("button").forEach((x, k) => (x.className = optCls(k === A.m[qid]))); refreshBar(); }
@@ -125,9 +134,9 @@ const dl = (name, text) => { const a = document.createElement("a"); a.href = URL
 function renderTeacher() {
   unsubT?.(); if (st().role !== "teacher") return;
   $("teacher-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700"><i class="fa-solid fa-chalkboard-user mr-2"></i>Quản lý của cô</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
-   <div class="flex gap-2">${[["hs", "Tài khoản học sinh"], ["qb", "Ngân hàng câu hỏi"], ["gm", "Game theo chương"]].map(([k, l]) => `<button data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === tTab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}</button>`).join("")}</div><div id="t-body"></div>`;
+   <div class="flex gap-2">${[["hs", "Tài khoản học sinh"], ["ex", "Đề thi"], ["qb", "Ngân hàng câu hỏi"], ["gm", "Game theo chương"]].map(([k, l]) => `<button data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === tTab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}</button>`).join("")}</div><div id="t-body"></div>`;
   $("teacher-view").querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { tTab = b.dataset.t; renderTeacher(); }));
-  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else import("./editor.js?v=1").then((m) => m.mount($("t-body"), { CH, norm, db, esc }));
+  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else if (tTab === "ex") import("./exams.js?v=1").then((m) => { if (tTab === "ex") unsubT = m.teacherExams($("t-body")); }); else import("./editor.js?v=2").then((m) => m.mount($("t-body"), { CH, norm, db, esc }));
 }
 function teacherStudents() {
   $("t-body").innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 mb-3">🔒 Mật khẩu của HS được Firebase mã hoá nên <b>không ai xem được</b> (kể cả cô). Khi em quên mật khẩu, bấm <b>Gửi mail đặt lại</b>: em nhận email và tự đặt mật khẩu mới.</div>
@@ -253,4 +262,13 @@ window.addEventListener("mh-auth", () => {
   const uidNow = me?.uid || null; if (uidNow !== dgUid) { dgUid = uidNow; dashGames(); }
   if (!me) { unsubG?.(); unsubT?.(); if (VIEWS.slice(2).some((v) => !$(v).classList.contains("hidden"))) goHome(); }
 });
+async function openExam(ex) {
+  if (!st().me) return window.MH.openAuth("login");
+  const id = "e_" + ex.id, had = st().prof.res?.[id];
+  if (!had && ex.minutes && !confirm(`Đề "${ex.title}" làm trong ${ex.minutes} phút. Bắt đầu tính giờ ngay bây giờ?`)) return;
+  cur = { id, tab: "mcq", ex: norm({ ...ex, id }), endAt: had || !ex.minutes ? 0 : Date.now() + ex.minutes * 60000 };
+  done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
+}
+window.MHL = { openExam, norm, openView, st };
+import("./exams.js?v=1").catch((e) => console.error("exams.js", e));
 window.dispatchEvent(new Event("mh-auth"));
