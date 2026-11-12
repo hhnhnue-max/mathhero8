@@ -73,7 +73,7 @@ function renderChapter() {
 }
 const card = (inner, id) => `<div ${id ? `id="${id}"` : ""} class="bg-white border border-slate-200 rounded-2xl p-4">${inner}</div>`;
 const EMPTY = `<p class="text-sm text-slate-500">Chương này chưa có câu hỏi dạng này.</p>`;
-const optCls = (sel, right, wrong, sm) => "border rounded-xl " + (sm ? "px-4 py-1 text-xs font-bold " : "text-left px-3 py-2 text-sm ") + (right ? "bg-green-100 border-green-500" : wrong ? "bg-red-100 border-red-500" : sel ? "bg-brand-50 border-brand-500 font-bold" : "border-slate-200 hover:bg-slate-50");
+const optCls = (sel, right, wrong, sm) => "border rounded-xl " + (sm ? "px-4 py-1 text-xs font-bold " : "text-left px-3 py-2 text-sm ") + (right ? "bg-green-100 border-green-500" : wrong ? "bg-red-100 border-red-500" : sel ? "bg-blue-50 border-blue-500 text-blue-800 font-bold ring-2 ring-blue-200" : "border-slate-200 hover:bg-slate-50");
 const note = (ok, pts, exp) => `<div class="text-xs mt-2">${ok ? "✅ Đúng" : "❌ Chưa đúng"} <b class="text-brand-700">(+${f(pts)} điểm)</b>${exp ? `<div class="text-slate-600 mt-1">${esc(exp)}</div>` : ""}</div>`;
 const mcqHTML = (ch) => ch.mcq.map((q, k) => { const sel = A.m[q.id]; return card(`<div class="font-bold text-sm mb-2">Câu ${k + 1}. ${esc(q.q)}</div>
   <div class="grid sm:grid-cols-2 gap-2">${q.opts.map((o, i) => `<button data-act="mc" data-id="${q.id}" data-i="${i}" ${RES ? "disabled" : ""} class="${optCls(sel === i, RES && i === q.ans, RES && sel === i && i !== q.ans)}">${"ABCD"[i]}. ${esc(o)}</button>`).join("")}</div>
