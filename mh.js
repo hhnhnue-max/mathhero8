@@ -200,4 +200,4 @@ onAuthStateChanged(auth, (u) => {
 });
 
 window.MH = { db, auth, esc, okAvatar, errText, openAuth, state: () => ({ me, prof, role }), addXP: (n) => { setXP((lastXP ?? prof.xp ?? 0) + n); updateDoc(doc(db, "users", me.uid), { xp: increment(n) }).catch(() => {}); clearTimeout(lbTimer); lbTimer = setTimeout(syncLB, 600); } };
-import("./learn.js?v=4").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
+import("./learn.js?v=5").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
