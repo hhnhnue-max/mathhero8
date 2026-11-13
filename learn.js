@@ -136,7 +136,7 @@ function renderTeacher() {
   $("teacher-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700"><i class="fa-solid fa-chalkboard-user mr-2"></i>Quản lý của cô</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
    <div class="flex gap-2">${[["hs", "Tài khoản học sinh"], ["ex", "Đề thi"], ["qb", "Ngân hàng câu hỏi"], ["gm", "Game theo chương"]].map(([k, l]) => `<button data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === tTab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}</button>`).join("")}</div><div id="t-body"></div>`;
   $("teacher-view").querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { tTab = b.dataset.t; renderTeacher(); }));
-  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else if (tTab === "ex") import("./exams.js?v=1").then((m) => { if (tTab === "ex") unsubT = m.teacherExams($("t-body")); }); else import("./editor.js?v=2").then((m) => m.mount($("t-body"), { CH, norm, db, esc }));
+  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else if (tTab === "ex") import("./exams.js?v=3").then((m) => { if (tTab === "ex") unsubT = m.teacherExams($("t-body")); }).catch((e) => { $("t-body").innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"><b>Chưa tải được phần Đề thi:</b> ${esc(e.message)}<br>Cô kiểm tra trên GitHub đã có đủ các file <b>exams.js, docparse.js, editor.js, learn.js, mh.js, index.html</b> chưa (tên đúng nguyên, không có số trong ngoặc), rồi nhấn Cmd+Shift+R.</div>`; }); else import("./editor.js?v=2").then((m) => m.mount($("t-body"), { CH, norm, db, esc }));
 }
 function teacherStudents() {
   $("t-body").innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 mb-3">🔒 Mật khẩu của HS được Firebase mã hoá nên <b>không ai xem được</b> (kể cả cô). Khi em quên mật khẩu, bấm <b>Gửi mail đặt lại</b>: em nhận email và tự đặt mật khẩu mới.</div>
@@ -270,5 +270,5 @@ async function openExam(ex) {
   done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
 }
 window.MHL = { openExam, norm, openView, st };
-import("./exams.js?v=1").catch((e) => console.error("exams.js", e));
+import("./exams.js?v=3").catch((e) => console.error("exams.js", e));
 window.dispatchEvent(new Event("mh-auth"));

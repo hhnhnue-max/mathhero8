@@ -81,6 +81,7 @@ export function teacherExams(root) {
     else if (a === "score") scores(e);
     else if (a === "edit") { mode = "edit"; const m = await import("./editor.js?v=2"); m.mount(root, { CH: [], norm: L.norm, db, esc, exam: { id: e.id, title: e.title, back: () => { root.onclick = handle; root.oninput = root.onchange = null; mode = "list"; paint(); } } }); } };
   root.onclick = handle;
-  function listen() { off = onSnapshot(collection(db, "exams"), (s) => { DOCS = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt); paint(); }); }
-  listen(); return () => off();
+  function listen() { off = onSnapshot(collection(db, "exams"), (s) => { DOCS = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt); paint(); },
+    (err) => { paint(); root.insertAdjacentHTML("afterbegin", `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 mb-3"><b>Chưa đọc được dữ liệu đề thi (${esc(err.code || err.message)}).</b><br>Cô kiểm tra: đã dán <b>firestore.rules mới</b> vào Firebase → Firestore → Rules và bấm <b>Publish</b> chưa? Sau đó tải lại trang (Cmd+Shift+R).</div>`); }); }
+  paint(); listen(); return () => off();
 }

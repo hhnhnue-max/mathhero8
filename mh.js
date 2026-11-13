@@ -178,8 +178,8 @@ function listenLB() {
 // ---------- Hiển thị hồ sơ ----------
 function render() {
   hdrImg.src = okAvatar(prof.avatar);
-  $("who").textContent = prof.name ? `${prof.name}${prof.cls ? " · " + prof.cls : ""}` : "";
-  $("who").classList.toggle("hidden", !prof.name); $("who").classList.toggle("sm:block", !!prof.name);
+  $("who").classList.add("hidden"); $("who").classList.remove("sm:block");
+  $("school-pill").textContent = me && prof.name ? `${prof.name} | ${prof.school || "THCS Võ Thị Sáu"}` : "THCS Võ Thị Sáu";
   $("side-who").textContent = me ? (role === "teacher" ? "Giáo viên: " : "HS: ") + (prof.name || me.email) + (role !== "teacher" && prof.cls ? " · " + prof.cls : "") : "Khách · chưa đăng nhập";
   $("streak-n").textContent = role === "teacher" ? "GV" : (me ? prof.streak || 0 : 0) + " Ngày";
   window.dispatchEvent(new Event("mh-auth"));
@@ -200,4 +200,4 @@ onAuthStateChanged(auth, (u) => {
 });
 
 window.MH = { db, auth, esc, okAvatar, errText, openAuth, state: () => ({ me, prof, role }), addXP: (n) => { setXP((lastXP ?? prof.xp ?? 0) + n); updateDoc(doc(db, "users", me.uid), { xp: increment(n) }).catch(() => {}); clearTimeout(lbTimer); lbTimer = setTimeout(syncLB, 600); } };
-import("./learn.js?v=7").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
+import("./learn.js?v=9").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
