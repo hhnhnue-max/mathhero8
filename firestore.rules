@@ -51,6 +51,14 @@ service cloud.firestore {
       allow read: if request.auth != null && (resource.data.published == true || isTeacher());
       allow write: if isTeacher();
     }
+    match /pdfexams/{id} {
+      allow read: if request.auth != null && (resource.data.published == true || isTeacher());
+      allow write: if isTeacher();
+    }
+    match /pdfchunks/{id} {
+      allow read: if request.auth != null;
+      allow write: if isTeacher();
+    }
     // ===== Website Toán 9 (dữ liệu tách riêng, tiền tố g9_) =====
     function isTeacher9() {
       return request.auth != null && request.auth.token.email == 'hhn.hnue@gmail.com';
@@ -86,6 +94,14 @@ service cloud.firestore {
     }
     match /g9_lessons/{id} {
       allow read: if request.auth != null && (resource.data.published == true || isTeacher9());
+      allow write: if isTeacher9();
+    }
+    match /g9_pdfexams/{id} {
+      allow read: if request.auth != null && (resource.data.published == true || isTeacher9());
+      allow write: if isTeacher9();
+    }
+    match /g9_pdfchunks/{id} {
+      allow read: if request.auth != null;
       allow write: if isTeacher9();
     }
   }

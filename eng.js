@@ -22,7 +22,7 @@ function prog(l) {
   return { k, nw, q, e, nt, v, x, tot: Math.round((v + q + x) / 3) };
 }
 const tone = (p) => (p >= 100 ? "bg-green-50 border-green-400" : p > 0 ? "bg-amber-50 border-amber-300" : "bg-white border-slate-200");
-const bar = (p, c = "bg-sky-500") => `<div class="h-2 rounded-full bg-slate-200/70 overflow-hidden"><div class="h-full ${p >= 100 ? "bg-green-500" : c}" style="width:${p}%"></div></div>`;
+const bar = (p, c = "bg-brand-500") => `<div class="h-2 rounded-full bg-slate-200/70 overflow-hidden"><div class="h-full ${p >= 100 ? "bg-green-500" : c}" style="width:${p}%"></div></div>`;
 
 // ---------- Phát âm ----------
 const canSpeak = "speechSynthesis" in window; if (canSpeak) speechSynthesis.getVoices();
@@ -34,8 +34,8 @@ function speak(text, r, onend) {
 function playAll(ws) { stopAll = false; let i = 0; const next = () => { if (stopAll || i >= ws.length) return ($("pa") && ($("pa").textContent = "🔊 Nghe cả bài")); const w = ws[i++]; speak(w.en, rate, () => setTimeout(next, 700)); }; if ($("pa")) $("pa").textContent = "⏹ Dừng"; next(); }
 
 // ---------- Lối vào ----------
-$("btn-notes").insertAdjacentHTML("afterend", `<button id="btn-eng" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-sky-50 text-sky-800 font-extrabold text-sm border border-sky-200"><i class="fa-solid fa-language"></i> Học Toán bằng tiếng Anh</button>`);
-$("dash-games").insertAdjacentHTML("beforebegin", `<div class="bg-gradient-to-r from-sky-600 to-blue-500 text-white rounded-3xl p-5 flex flex-wrap items-center justify-between gap-3"><div><div class="font-black text-lg">🔤 Học Toán bằng tiếng Anh</div><div class="text-xs opacity-90">Từ vựng có phiên âm và phát âm · tự kiểm tra · bài tập tiếng Anh</div></div><button id="dash-eng" class="bg-white text-sky-700 font-extrabold text-sm rounded-xl px-4 py-2">Vào học →</button></div>`);
+$("btn-notes").insertAdjacentHTML("afterend", `<button id="btn-eng" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-brand-50 text-brand-800 font-extrabold text-sm border border-brand-200"><i class="fa-solid fa-language"></i> Học Toán bằng tiếng Anh</button>`);
+$("dash-games").insertAdjacentHTML("beforebegin", `<div class="bg-gradient-to-r from-brand-600 to-brand-600 text-white rounded-3xl p-5 flex flex-wrap items-center justify-between gap-3"><div><div class="font-black text-lg">🔤 Học Toán bằng tiếng Anh</div><div class="text-xs opacity-90">Từ vựng có phiên âm và phát âm · tự kiểm tra · bài tập tiếng Anh</div></div><button id="dash-eng" class="bg-white text-brand-700 font-extrabold text-sm rounded-xl px-4 py-2">Vào học →</button></div>`);
 async function openEng(back) {
   if (!st().me) { if (!$("sidebar").classList.contains("-translate-x-full")) toggleSidebar(); return window.MH.openAuth("login"); }
   try { await load(); } catch (e) { return alert("Chưa tải được dữ liệu từ vựng (vocab.json). Cô kiểm tra file đã được tải lên GitHub chưa."); }
@@ -48,38 +48,38 @@ const reset = () => { if (canSpeak) speechSynthesis.cancel(); stopAll = true; un
 // ---------- Màn hình 1: các chương, mỗi chương một ô ngang chứa các bài ----------
 function homeView() {
   reset(); S.no = null; Q = null; const ps = {}; LES.forEach((l) => (ps[l.no] = prog(l))); const avg = (a) => (a.length ? Math.round(a.reduce((s, x) => s + x, 0) / a.length) : 0), all = avg(LES.map((l) => ps[l.no].tot));
-  $("eng-view").innerHTML = head + `<div class="bg-gradient-to-br from-sky-700 to-blue-600 text-white rounded-3xl p-5"><div class="text-xs font-bold opacity-80">Em đã hoàn thành</div><div class="text-3xl font-black">${all}%</div><div class="h-2 rounded-full bg-white/25 overflow-hidden mt-2"><div class="h-full bg-yellow-300" style="width:${all}%"></div></div>
+  $("eng-view").innerHTML = head + `<div class="bg-gradient-to-br from-brand-700 to-brand-600 text-white rounded-3xl p-5"><div class="text-xs font-bold opacity-80">Em đã hoàn thành</div><div class="text-3xl font-black">${all}%</div><div class="h-2 rounded-full bg-white/25 overflow-hidden mt-2"><div class="h-full bg-yellow-300" style="width:${all}%"></div></div>
     <div class="text-[11px] opacity-90 mt-2">Mỗi bài tính trung bình 3 phần: 📖 từ vựng đã thuộc · ✅ điểm tự kiểm tra tốt nhất · ✏️ bài tập đã làm</div></div>`
    + CHS.map((c) => { const cp = avg(c.lessons.map((l) => ps[l.no].tot));
-    return `<div class="bg-white border border-slate-200 rounded-3xl p-4"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><div class="text-[11px] font-extrabold text-sky-700">CHAPTER ${c.id}</div><div class="font-extrabold text-slate-900">${esc(c.en)} <span class="text-slate-500 font-bold text-sm">· ${esc(c.vi)}</span></div></div><div class="text-2xl font-black ${cp >= 100 ? "text-green-600" : "text-sky-700"}">${cp}%</div></div>
+    return `<div class="bg-white border border-slate-200 rounded-3xl p-4"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><div class="text-[11px] font-extrabold text-brand-700">CHAPTER ${c.id}</div><div class="font-extrabold text-slate-900">${esc(c.en)} <span class="text-slate-500 font-bold text-sm">· ${esc(c.vi)}</span></div></div><div class="text-2xl font-black ${cp >= 100 ? "text-green-600" : "text-brand-700"}">${cp}%</div></div>
      <div class="mt-2">${bar(cp)}</div><div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">${c.lessons.map((l) => { const p = ps[l.no];
-       return `<button data-les="${l.no}" class="text-left rounded-2xl border p-3 hover:shadow ${tone(p.tot)}"><div class="flex items-start justify-between gap-2"><span class="text-xs font-extrabold text-slate-800">Lesson ${l.no}. ${esc(l.title)}</span><span class="font-black text-sm ${p.tot >= 100 ? "text-green-600" : "text-sky-700"}">${p.tot}%</span></div>
+       return `<button data-les="${l.no}" class="text-left rounded-2xl border p-3 hover:shadow ${tone(p.tot)}"><div class="flex items-start justify-between gap-2"><span class="text-xs font-extrabold text-slate-800">Lesson ${l.no}. ${esc(l.title)}</span><span class="font-black text-sm ${p.tot >= 100 ? "text-green-600" : "text-brand-700"}">${p.tot}%</span></div>
         <div class="mt-1.5">${bar(p.tot)}</div><div class="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-600"><span>📖 ${p.k}/${p.nw} từ</span><span>✅ ${p.q}%</span><span>✏️ ${p.e}/${p.nt} bài</span></div></button>`; }).join("")}</div></div>`; }).join("");
 }
 
 // ---------- Màn hình 2: một bài (3 mục) ----------
 function lessonView() {
   reset(); const l = lesson(), i = LES.findIndex((x) => x.no === l.no), prev = LES[i - 1], next = LES[i + 1], c = CHS.find((x) => x.id === l.chap);
-  $("eng-view").innerHTML = `<div class="flex items-center justify-between gap-2"><button data-home="1" class="text-sm font-bold text-sky-700">← Danh sách chương</button><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
-   <div><div class="text-[11px] font-extrabold text-sky-700">CHAPTER ${c.id} · ${esc(c.en)}</div><h2 class="font-extrabold text-xl text-slate-900">Lesson ${l.no}. ${esc(l.title)}</h2></div>
+  $("eng-view").innerHTML = `<div class="flex items-center justify-between gap-2"><button data-home="1" class="text-sm font-bold text-brand-700">← Danh sách chương</button><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
+   <div><div class="text-[11px] font-extrabold text-brand-700">CHAPTER ${c.id} · ${esc(c.en)}</div><h2 class="font-extrabold text-xl text-slate-900">Lesson ${l.no}. ${esc(l.title)}</h2></div>
    <div id="en-tabs" class="grid grid-cols-3 gap-2">${tabCards()}</div><div id="eng-body" class="space-y-3"></div>
-   <div class="flex justify-between pt-2">${prev ? `<button data-nav="${prev.no}" class="text-xs font-bold text-sky-700 border rounded-xl px-3 py-2 bg-white">← Lesson ${prev.no}</button>` : "<span></span>"}${next ? `<button data-nav="${next.no}" class="text-xs font-bold text-sky-700 border rounded-xl px-3 py-2 bg-white">Lesson ${next.no} →</button>` : ""}</div>`;
+   <div class="flex justify-between pt-2">${prev ? `<button data-nav="${prev.no}" class="text-xs font-bold text-brand-700 border rounded-xl px-3 py-2 bg-white">← Lesson ${prev.no}</button>` : "<span></span>"}${next ? `<button data-nav="${next.no}" class="text-xs font-bold text-brand-700 border rounded-xl px-3 py-2 bg-white">Lesson ${next.no} →</button>` : ""}</div>`;
   ({ vocab: vocabTab, quiz: quizTab, ex: exTab })[S.tab]();
 }
 function tabCards() {
   const p = prog(lesson()), T = [["vocab", "📖", "Từ vựng", `${p.k}/${p.nw} từ đã thuộc`, p.v], ["quiz", "✅", "Tự kiểm tra", `Tốt nhất: ${p.q}%`, p.q], ["ex", "✏️", "Bài tập", `${p.e}/${p.nt} bài đã làm`, p.x]];
-  return T.map(([k, ic, t, sub, pc]) => `<button data-t="${k}" class="rounded-2xl border-2 p-3 text-left ${k === S.tab ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"}"><div class="text-lg">${ic}</div><div class="text-xs font-extrabold text-slate-900">${t}</div><div class="text-[10px] font-bold text-slate-500 mb-1.5">${sub}</div>${bar(pc)}</button>`).join("");
+  return T.map(([k, ic, t, sub, pc]) => `<button data-t="${k}" class="rounded-2xl border-2 p-3 text-left ${k === S.tab ? "border-brand-500 bg-brand-50" : "border-slate-200 bg-white"}"><div class="text-lg">${ic}</div><div class="text-xs font-extrabold text-slate-900">${t}</div><div class="text-[10px] font-bold text-slate-500 mb-1.5">${sub}</div>${bar(pc)}</button>`).join("");
 }
 const refresh = () => { if ($("en-tabs")) $("en-tabs").innerHTML = tabCards(); };
 
 // ---- Mục 1: Từ vựng
 function vocabTab() {
-  const l = lesson(); $("eng-body").innerHTML = `<div class="flex flex-wrap items-center gap-2"><input id="en-q" placeholder="Tìm từ..." class="${INP} flex-1 min-w-[130px]">${[["0.6", "Chậm"], ["0.85", "Vừa"], ["1", "Nhanh"]].map(([r, t]) => `<button data-rate="${r}" class="text-xs font-bold rounded-xl px-3 py-2 border ${rate === +r ? "bg-sky-600 text-white border-sky-600" : "bg-white"}">${t}</button>`).join("")}<button id="pa" class="bg-sky-600 text-white text-xs font-bold rounded-xl px-3 py-2">🔊 Nghe cả bài</button></div>
+  const l = lesson(); $("eng-body").innerHTML = `<div class="flex flex-wrap items-center gap-2"><input id="en-q" placeholder="Tìm từ..." class="${INP} flex-1 min-w-[130px]">${[["0.6", "Chậm"], ["0.85", "Vừa"], ["1", "Nhanh"]].map(([r, t]) => `<button data-rate="${r}" class="text-xs font-bold rounded-xl px-3 py-2 border ${rate === +r ? "bg-brand-600 text-white border-brand-600" : "bg-white"}">${t}</button>`).join("")}<button id="pa" class="bg-brand-600 text-white text-xs font-bold rounded-xl px-3 py-2">🔊 Nghe cả bài</button></div>
    <p class="text-xs text-slate-500">Bấm 🔊 để nghe. Bấm <b>✓ Đã thuộc</b> khi em đã nhớ từ đó để theo dõi tiến độ.${canSpeak ? "" : " (Thiết bị này chưa hỗ trợ phát âm.)"}</p><div id="en-list" class="grid md:grid-cols-2 gap-3"></div>`; drawVocab("");
 }
 function drawVocab(q) {
   const l = lesson(), kn = getKn(l.no), ws = l.words.map((w, i) => ({ w, i })).filter(({ w }) => (w.en + " " + w.vi).toLowerCase().includes(q.toLowerCase()));
-  $("en-list").innerHTML = ws.map(({ w, i }) => `<div class="bg-white border ${kn.has(w.en) ? "border-green-400" : "border-slate-200"} rounded-2xl p-3 flex gap-3"><button data-sp="${i}" class="w-11 h-11 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-lg shrink-0">🔊</button>
+  $("en-list").innerHTML = ws.map(({ w, i }) => `<div class="bg-white border ${kn.has(w.en) ? "border-green-400" : "border-slate-200"} rounded-2xl p-3 flex gap-3"><button data-sp="${i}" class="w-11 h-11 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-lg shrink-0">🔊</button>
     <div class="flex-1 min-w-0"><div class="font-extrabold text-slate-900">${esc(w.en)}</div><div class="text-xs text-slate-500">${esc(w.ipa)}</div><div class="text-sm font-bold text-brand-700">${esc(w.vi)}</div>
     ${w.ex ? `<div class="text-xs text-slate-600 mt-1 flex gap-1.5 items-start"><button data-spx="${i}" class="shrink-0">🔈</button><i>${esc(w.ex)}</i></div>` : ""}
     <button data-kn="${i}" class="mt-2 text-[11px] font-bold rounded-lg px-2.5 py-1 border ${kn.has(w.en) ? "bg-green-100 border-green-400 text-green-700" : "bg-white text-slate-600"}">${kn.has(w.en) ? "✓ Đã thuộc" : "Đánh dấu đã thuộc"}</button></div></div>`).join("") || `<p class="text-sm text-slate-500">Không tìm thấy từ nào.</p>`;
@@ -93,7 +93,7 @@ function toggleKnown(i) {
 const normE = (s) => String(s).toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 function quizTab() { Q ? quizStep() : quizSetup(); }
 function quizSetup() {
-  const sc = [["lesson", "Bài này"], ["chap", "Cả chương"], ["all", "Tất cả các bài"]], md = [[1, "Thấy từ tiếng Anh → chọn nghĩa tiếng Việt"], [2, "Thấy nghĩa tiếng Việt → chọn từ tiếng Anh"], ...(canSpeak ? [[3, "Nghe phát âm → chọn từ tiếng Anh"]] : []), [4, "Thấy nghĩa tiếng Việt → gõ từ tiếng Anh"]], on = (a) => (a ? "bg-sky-600 text-white border-sky-600" : "bg-white");
+  const sc = [["lesson", "Bài này"], ["chap", "Cả chương"], ["all", "Tất cả các bài"]], md = [[1, "Thấy từ tiếng Anh → chọn nghĩa tiếng Việt"], [2, "Thấy nghĩa tiếng Việt → chọn từ tiếng Anh"], ...(canSpeak ? [[3, "Nghe phát âm → chọn từ tiếng Anh"]] : []), [4, "Thấy nghĩa tiếng Việt → gõ từ tiếng Anh"]], on = (a) => (a ? "bg-brand-600 text-white border-brand-600" : "bg-white");
   $("eng-body").innerHTML = `<div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3"><div class="font-extrabold text-sm text-brand-700">Chọn cách kiểm tra (10 câu)</div>
    <div><div class="text-xs font-bold text-slate-600 mb-1">Phạm vi</div><div class="flex flex-wrap gap-2">${sc.map(([k, t]) => `<button data-sc="${k}" class="text-xs font-bold rounded-xl px-3 py-2 border ${on(Q0.scope === k)}">${t}</button>`).join("")}</div></div>
    <div><div class="text-xs font-bold text-slate-600 mb-1">Hình thức</div><div class="grid gap-2">${md.map(([k, t]) => `<button data-md="${k}" class="text-left text-xs font-bold rounded-xl px-3 py-2 border ${on(Q0.mode === k)}">${k}. ${t}</button>`).join("")}</div></div>
@@ -106,7 +106,7 @@ function quizStart(scope, mode) {
 }
 function quizStep() {
   if (Q.i >= Q.items.length) return quizResult(); const { w, opts } = Q.items[Q.i], m = Q.mode; Q.done = false;
-  const hd = m === 1 ? `<div class="text-3xl font-black">${esc(w.en)}</div><div class="text-sm text-slate-500">${esc(w.ipa)}</div><button data-say="1" class="mt-1 text-sm">🔊 Nghe</button>` : m === 3 ? `<button data-say="1" class="bg-sky-600 text-white rounded-full w-16 h-16 text-3xl">🔊</button><div class="text-xs text-slate-500 mt-1">Nghe và chọn từ đúng</div>` : `<div class="text-2xl font-black">${esc(w.vi)}</div>`;
+  const hd = m === 1 ? `<div class="text-3xl font-black">${esc(w.en)}</div><div class="text-sm text-slate-500">${esc(w.ipa)}</div><button data-say="1" class="mt-1 text-sm">🔊 Nghe</button>` : m === 3 ? `<button data-say="1" class="bg-brand-600 text-white rounded-full w-16 h-16 text-3xl">🔊</button><div class="text-xs text-slate-500 mt-1">Nghe và chọn từ đúng</div>` : `<div class="text-2xl font-black">${esc(w.vi)}</div>`;
   const body = m === 4 ? `<div class="flex gap-2 mt-3"><input id="qz-in" autocomplete="off" autocapitalize="off" placeholder="Gõ từ tiếng Anh..." class="${INP} flex-1"><button data-act="qcheck" class="bg-brand-600 text-white font-bold rounded-xl px-4 text-sm">Kiểm tra</button></div>`
     : `<div class="grid sm:grid-cols-2 gap-2 mt-3">${opts.map((o, k) => `<button data-opt="${k}" class="text-left border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold hover:bg-slate-50">${esc(m === 1 ? o.vi : o.en)}</button>`).join("")}</div>`;
   $("eng-body").innerHTML = `<div class="bg-white border border-slate-200 rounded-2xl p-4"><div class="flex justify-between text-xs font-bold text-slate-500 mb-3"><span>Câu ${Q.i + 1}/${Q.items.length}</span><span>Đúng: ${Q.score}</span></div><div class="text-center">${hd}</div>${body}<div id="qz-fb" class="mt-3 text-sm"></div></div>`;
@@ -123,19 +123,20 @@ async function quizResult() {
   if (Q.scope === "lesson") { const b = st().prof.vq?.[l.no], upd = {}; if (!b || pct > b.best) upd[`vq.${l.no}`] = { best: pct, at: Date.now() };
     const key = "v" + l.no; if (pct >= 80 && !(st().prof.done || []).includes(key)) { upd.done = arrayUnion(key); window.MH.addXP(20); note = " · <b class='text-yellow-300'>+20 XP</b>"; }
     if (Object.keys(upd).length) updateDoc(doc(db, "users", st().me.uid), upd).catch(() => {}); }
-  $("eng-body").innerHTML = `<div class="bg-gradient-to-br from-sky-700 to-blue-600 text-white rounded-3xl p-5 text-center"><div class="text-xs font-bold opacity-80">Kết quả</div><div class="text-4xl font-black">${Q.score}/${n} <span class="text-lg">(${pct}%)</span></div><div class="text-sm mt-1">${pct >= 80 ? "Giỏi lắm! 🎉" : pct >= 50 ? "Khá tốt, em ôn thêm nhé!" : "Em hãy xem lại từ vựng rồi thử lại nhé!"}${note}</div></div>
+  $("eng-body").innerHTML = `<div class="bg-gradient-to-br from-brand-700 to-brand-600 text-white rounded-3xl p-5 text-center"><div class="text-xs font-bold opacity-80">Kết quả</div><div class="text-4xl font-black">${Q.score}/${n} <span class="text-lg">(${pct}%)</span></div><div class="text-sm mt-1">${pct >= 80 ? "Giỏi lắm! 🎉" : pct >= 50 ? "Khá tốt, em ôn thêm nhé!" : "Em hãy xem lại từ vựng rồi thử lại nhé!"}${note}</div></div>
    ${Q.wrong.length ? `<div class="bg-white border border-slate-200 rounded-2xl p-4"><div class="font-extrabold text-sm mb-2">Từ cần ôn lại</div>${Q.wrong.map((w) => `<div class="flex items-center gap-2 border-t py-1.5 text-sm"><button data-sayw="${esc(w.en)}">🔊</button><b>${esc(w.en)}</b> <span class="text-slate-500 text-xs">${esc(w.ipa)}</span> <span class="ml-auto text-brand-700 font-bold">${esc(w.vi)}</span></div>`).join("")}</div>` : ""}
    <div class="flex gap-2"><button data-act="qagain" class="bg-brand-600 text-white font-bold rounded-xl px-4 py-2 text-sm">Làm lại</button><button data-act="qreset" class="bg-slate-100 font-bold rounded-xl px-4 py-2 text-sm">Đổi cách kiểm tra</button></div>`;
   refresh();
 }
 
 // ---- Mục 3: Bài tập (ví dụ có lời giải · bài luyện tập · đáp án · bài chấm điểm do cô đăng)
-const blk = (m, r) => `<div class="relative overflow-hidden rounded-xl bg-white border border-slate-200" style="padding-top:${((r[1] / WBW) * 100).toFixed(3)}%"><img loading="lazy" src="${m.img}?v=1" alt="" class="absolute left-0 w-full" style="top:0;margin-top:-${((r[0] / WBW) * 100).toFixed(3)}%"></div>`;
+const blk = (m, r) => { const den = m.h - r[1], p = den > 0 ? ((r[0] / den) * 100).toFixed(4) : 0;
+  return `<div class="rounded-xl bg-white border border-slate-200" style="padding-top:${((r[1] / WBW) * 100).toFixed(3)}%;background-image:url('${m.img}?v=1');background-repeat:no-repeat;background-size:100% auto;background-position:0 ${p}%"></div>`; };
 function exTab() {
   const l = lesson(), m = WB[l.no], ep = getEp(l.no), n = l.no; let h = "";
   if (m) {
     h += `<h3 class="font-extrabold text-slate-800">📘 Ví dụ có lời giải tham khảo (${m.ex.length})</h3>` + m.ex.map((e, k) => `<div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2"><div class="flex items-center justify-between"><b class="text-sm">Example ${k + 1}</b>${ep.has("e" + (k + 1)) ? `<span class="text-[11px] font-bold text-green-700">✓ Đã xem lời giải</span>` : ""}</div>${blk(m, e.p)}
-      ${e.s ? `<button data-sol="${k}" class="text-xs font-bold rounded-xl px-3 py-1.5 bg-sky-600 text-white">👁 Xem lời giải tham khảo</button><div id="sol-${k}" class="hidden">${blk(m, e.s)}</div>` : ""}</div>`).join("");
+      ${e.s ? `<button data-sol="${k}" class="text-xs font-bold rounded-xl px-3 py-1.5 bg-brand-600 text-white">👁 Xem lời giải tham khảo</button><div id="sol-${k}" class="hidden">${blk(m, e.s)}</div>` : ""}</div>`).join("");
     h += `<h3 class="font-extrabold text-slate-800 mt-2">✏️ Bài luyện tập (${m.ws.length})</h3><p class="text-xs text-slate-500">Em làm vào vở, xong thì bấm “Em đã làm xong” để tính tiến độ.</p>` + m.ws.map((r, k) => { const d = ep.has("x" + (k + 1));
       return `<div class="bg-white border ${d ? "border-green-400" : "border-slate-200"} rounded-2xl p-3 space-y-2"><b class="text-sm">Exercise ${k + 1}</b>${blk(m, r)}<button data-done="${k + 1}" class="text-xs font-bold rounded-xl px-3 py-1.5 border ${d ? "bg-green-100 border-green-400 text-green-700" : "bg-white"}">${d ? "✓ Em đã làm xong" : "Em đã làm xong"}</button></div>`; }).join("");
     h += m.key ? `<div class="bg-white border border-amber-300 rounded-2xl p-3 space-y-2"><b class="text-sm">🔑 Đáp án các bài luyện tập</b><div><button data-key="1" class="text-xs font-bold rounded-xl px-3 py-1.5 bg-amber-500 text-white">Xem đáp án tham khảo</button></div><div id="key-box" class="hidden">${blk(m, m.key)}</div></div>` : `<p class="text-xs text-slate-500">Bài này chưa có đáp án trong tài liệu.</p>`;
