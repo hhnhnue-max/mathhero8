@@ -1,18 +1,18 @@
-// MATH HERO 8 - Chương học (trắc nghiệm / đúng-sai / trả lời ngắn / game) + khu quản lý của giáo viên
+// MATH HERO 9 - Chương học (trắc nghiệm / đúng-sai / trả lời ngắn / game) + khu quản lý của giáo viên
 import { collection, query, where, onSnapshot, addDoc, getDoc, getDocs, setDoc, deleteField, orderBy, limit, deleteDoc, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 const { db, auth, esc, errText } = window.MH;
 const $ = (id) => document.getElementById(id);
 const st = () => window.MH.state();
-const VIEWS = ["dashboard-view", "quiz-view", "chapter-view", "teacher-view", "progress-view", "notes-view", "exams-view", "eng-view"];
+const VIEWS = ["dashboard-view", "quiz-view", "chapter-view", "teacher-view", "progress-view", "notes-view", "exams-view", "hub-view"];
 const openView = (id) => { if (!$("sidebar").classList.contains("-translate-x-full")) toggleSidebar(); VIEWS.forEach((v) => $(v).classList.toggle("hidden", v !== id)); scrollTo(0, 0); };
-const GROUPS = [["MẠCH ĐẠI SỐ", "fa-square-root-variable", [1, 2, 6, 7]], ["MẠCH HÌNH HỌC", "fa-shapes", [3, 4, 9, 10]], ["THỐNG KÊ & XÁC SUẤT", "fa-chart-column", [5, 8]]];
+const GROUPS = [["MẠCH ĐẠI SỐ", "fa-square-root-variable", [1, 2, 3, 6]], ["MẠCH HÌNH HỌC", "fa-shapes", [4, 5, 9, 10]], ["THỐNG KÊ & XÁC SUẤT", "fa-chart-column", [7, 8]]];
 const TABS = [["mcq", "Trắc nghiệm"], ["tf", "Đúng – Sai"], ["sa", "Trả lời ngắn"], ["game", "Game tương tác"]];
 const curCh = () => cur.ex || CH[cur.id - 1];
 const INP = "w-full border rounded-xl px-3 py-2 text-sm";
 let CH = [], cur = { id: 1, tab: "mcq" }, tm = null, done = new Set(), GAMES = {}, unsubG, unsubT, tTab = "hs";
 
-document.querySelector("main").insertAdjacentHTML("beforeend", `<section id="chapter-view" class="hidden space-y-4"></section><section id="teacher-view" class="hidden space-y-4"></section><section id="progress-view" class="hidden space-y-4"></section><section id="notes-view" class="hidden space-y-4"></section><section id="exams-view" class="hidden space-y-4"></section><section id="eng-view" class="hidden space-y-4"></section>`);
+document.querySelector("main").insertAdjacentHTML("beforeend", `<section id="chapter-view" class="hidden space-y-4"></section><section id="teacher-view" class="hidden space-y-4"></section><section id="progress-view" class="hidden space-y-4"></section><section id="notes-view" class="hidden space-y-4"></section><section id="exams-view" class="hidden space-y-4"></section><section id="hub-view" class="hidden space-y-4"></section>`);
 document.body.insertAdjacentHTML("beforeend", `<div id="game-modal" class="fixed inset-0 z-[70] hidden flex-col bg-slate-900"><div class="flex items-center justify-between p-3 bg-brand-700 text-white"><span id="game-title" class="font-extrabold text-sm"></span><button id="game-close" class="bg-white/20 rounded-xl px-3 py-1 text-sm font-bold">Đóng ✕</button></div><iframe id="game-frame" sandbox="allow-scripts allow-forms allow-popups allow-pointer-lock" class="flex-1 w-full bg-white"></iframe></div>`);
 $("btn-auth2").insertAdjacentHTML("afterend", `<button id="btn-notes" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 text-amber-800 font-extrabold text-sm border border-amber-200"><i class="fa-solid fa-clipboard-list"></i> Dặn dò của cô</button>`);
 $("sidebar").querySelector(".space-y-6").insertAdjacentHTML("afterbegin", `<button id="btn-teacher" class="hidden w-full items-center gap-3 px-4 py-3 rounded-2xl bg-amber-400 text-brand-900 font-extrabold text-sm"><i class="fa-solid fa-chalkboard-user"></i> Quản lý của cô</button>`);
@@ -21,18 +21,35 @@ $("game-close").onclick = () => { $("game-modal").classList.replace("flex", "hid
 
 // ---------- Menu chương ----------
 const norm = (c) => { c.mcq.forEach((q, i) => (q.id ||= `m${i + 1}`)); c.tf.forEach((q, i) => (q.id ||= `t${i + 1}`)); c.sa.forEach((q, i) => (q.id ||= `s${i + 1}`)); return c; };
-const loadQ = () => (loadQ.p ||= fetch("./questions.json?v=1").then((r) => r.json()).then((j) => (CH = j.chapters.map(norm))));
+const CH9 = [[1, "Phương trình và hệ hai phương trình bậc nhất hai ẩn"], [2, "Phương trình và bất phương trình bậc nhất một ẩn"], [3, "Căn bậc hai và căn bậc ba"], [4, "Hệ thức lượng trong tam giác vuông"], [5, "Đường tròn"],
+  [6, "Hàm số y = ax² (a ≠ 0). Phương trình bậc hai một ẩn"], [7, "Tần số và tần số tương đối"], [8, "Xác suất của biến cố trong một số mô hình xác suất đơn giản"], [9, "Đường tròn ngoại tiếp và đường tròn nội tiếp"], [10, "Một số hình khối trong thực tiễn"]].map(([id, title]) => ({ id, title, mcq: [], tf: [], sa: [] }));
+const loadQ = () => Promise.resolve((CH = CH9));
 loadQ().then(() => {
-  $("chap-list").innerHTML = GROUPS.map(([t, ic, ids]) => `<div class="mb-3"><div class="px-3 py-2 text-xs font-extrabold text-brand-700 bg-rose-50/80 rounded-xl mb-1"><i class="fa-solid ${ic} mr-1"></i>${t}</div>
+  $("chap-list").innerHTML = GROUPS.map(([t, ic, ids]) => `<div class="mb-3"><div class="px-3 py-2 text-xs font-extrabold text-brand-700 bg-orange-50/80 rounded-xl mb-1"><i class="fa-solid ${ic} mr-1"></i>${t}</div>
     <div class="space-y-1 pl-2">${ids.map((i) => `<button data-ch="${i}" class="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl">Chương ${i}: ${esc(CH[i - 1].title)}</button>`).join("")}</div></div>`).join("");
   $("chap-list").onclick = (e) => { const b = e.target.closest("[data-ch]"); if (b) openChapter(+b.dataset.ch); };
 });
+let unsubL, hubId = 1;
 async function openChapter(id) {
   if (!st().me) { if (!$("sidebar").classList.contains("-translate-x-full")) toggleSidebar(); return window.MH.openAuth("login"); }
-  await loadQ();
-  try { const p = await getDoc(doc(db, "qpub", String(id))); if (p.exists()) CH[id - 1] = norm({ ...CH[id - 1], ...p.data(), id }); } catch (e) {}
-  cur = { id, tab: "mcq" }; done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
-  const now = Date.now(); updateDoc(doc(db, "users", st().me.uid), { lastCh: id, lastAt: now, [`seen.${id}`]: now }).catch(() => {});
+  await loadQ(); hubId = id; unsubL?.(); unsubG?.(); openView("hub-view"); const c = CH[id - 1];
+  $("hub-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700">Chương ${c.id}: ${esc(c.title)}</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500"><i class="fa-solid fa-house mr-1"></i>Trang chủ</button></div>
+    <h3 class="font-extrabold text-slate-800 mt-2">📘 Bài tập</h3><div id="lesson-list" class="grid sm:grid-cols-2 gap-3"><p class="text-sm text-slate-500">Đang tải...</p></div>
+    <h3 class="font-extrabold text-slate-800 mt-4">🎮 Game tương tác</h3><div id="game-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+  unsubL = onSnapshot(query(collection(db, "g9_lessons"), where("ch", "==", id), where("published", "==", true)), (s) => { LES = {}; const arr = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.createdAt - b.createdAt); arr.forEach((x) => (LES[x.id] = x));
+    const res = st().prof.res || {}, box = $("lesson-list"); if (!box || hubId !== id) return;
+    box.innerHTML = arr.map((x, k) => { const r = res["l_" + x.id];
+      return `<div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2"><div class="font-bold text-sm">${k + 1}. ${esc(x.title)}</div><div class="text-[11px] text-slate-500">${x.mcq?.length || 0} trắc nghiệm · ${x.tf?.length || 0} đúng–sai · ${x.sa?.length || 0} trả lời ngắn</div>
+       <div class="flex items-center justify-between mt-1"><span class="text-xs font-black text-brand-700">${r ? "Đã nộp: " + f(r.sc.tot) + "/" + f(r.sc.maxTot) : "Chưa làm"}</span><button data-les="${x.id}" class="bg-brand-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">${r ? "Xem lại / Làm lại" : "Làm bài"}</button></div></div>`; }).join("") || `<p class="text-sm text-slate-500 col-span-full">Cô chưa đăng bài tập cho chương này.</p>`; },
+    () => { const box = $("lesson-list"); if (box) box.innerHTML = `<p class="text-sm text-red-600">Chưa tải được bài tập.</p>`; });
+  listenGames(id);
+  const now = Date.now(); updateDoc(doc(db, "g9_users", st().me.uid), { lastCh: id, lastAt: now, [`seen.${id}`]: now }).catch(() => {});
+}
+let LES = {};
+$("hub-view").addEventListener("click", (e) => { const b = e.target.closest("[data-les]"); if (b) openLesson(LES[b.dataset.les]); const g = e.target.closest("[data-act=play]"); if (g) playOf(GAMES[g.dataset.id], g.dataset.id); });
+function openLesson(les) {
+  const id = "l_" + les.id; cur = { id, tab: "mcq", ex: norm({ ...les, id, isLesson: true }), endAt: 0 };
+  done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
 }
 
 // ---------- Màn hình một chương: làm bài -> Nộp bài -> chấm điểm ----------
@@ -67,7 +84,7 @@ const resultHTML = () => { const r = RES.sc, nm = ["Phần I · Trắc nghiệm"
    <div class="text-3xl font-black">${f(r.tot)} / ${f(r.maxTot)} điểm</div><div class="grid grid-cols-3 gap-2 mt-3 text-center text-[11px]">${nm.map((t, k) => `<div class="bg-white/15 rounded-xl p-2"><div class="opacity-80">${t}</div><div class="font-black text-base">${f(r.p[k])}/${f(r.max[k])}</div></div>`).join("")}</div></div>`; };
 function renderChapter() {
   unsubG?.(); const ch = curCh(), body = { mcq: mcqHTML, tf: tfHTML, sa: saHTML, game: () => `<div id="game-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>` }[cur.tab](ch), bar = barHTML(ch);
-  $("chapter-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700">${cur.ex ? (cur.ex.isEng ? "🔤 " : "🏆 ") + esc(ch.title) : `Chương ${ch.id}: ${esc(ch.title)}`}</h2>${cur.ex?.isEng ? `<button data-act="back" class="text-sm font-bold text-brand-600">← Tiếng Anh</button>` : ""}${cur.ex && cur.ex.minutes && !RES ? `<span id="timer" class="font-black text-brand-700 bg-amber-100 rounded-full px-3 py-1 text-sm">⏱</span>` : ""}<button onclick="goHome()" class="text-sm font-bold text-slate-500"><i class="fa-solid fa-house mr-1"></i>Trang chủ</button></div>
+  $("chapter-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700">${cur.ex ? (cur.ex.isLesson ? "📘 " : "🏆 ") + esc(ch.title) : `Chương ${ch.id}: ${esc(ch.title)}`}</h2>${cur.ex?.isLesson ? `<button data-act="back" class="text-sm font-bold text-brand-600">← Chương ${cur.ex.ch}</button>` : ""}${cur.ex && cur.ex.minutes && !RES ? `<span id="timer" class="font-black text-brand-700 bg-amber-100 rounded-full px-3 py-1 text-sm">⏱</span>` : ""}<button onclick="goHome()" class="text-sm font-bold text-slate-500"><i class="fa-solid fa-house mr-1"></i>Trang chủ</button></div>
    <div id="tabs" class="flex gap-2 flex-wrap">${tabsHTML(ch)}</div>${RES && cur.tab !== "game" ? resultHTML() : ""}<div class="space-y-3">${body}</div>
    ${bar ? `<div id="bar" class="sticky bottom-0 bg-white/95 border-t p-3 flex items-center justify-between rounded-t-2xl">${bar}</div>` : ""}`;
   startTimer(); if (cur.tab === "game") listenGames(ch.id);
@@ -102,19 +119,19 @@ async function submit(auto) {
   const g = grade(ch), now = Date.now(), fresh = g.keys.filter(([k]) => !done.has(k)); fresh.forEach(([k]) => done.add(k));
   RES = JSON.parse(JSON.stringify({ a: A, sc: g.sc, at: now })); DRAFT[ch.id] = null;
   const upd = cur.ex ? { [`res.${ch.id}`]: RES, lastAt: now } : { [`res.${ch.id}`]: RES, lastCh: ch.id, lastAt: now, [`seen.${ch.id}`]: now }; if (fresh.length) upd.done = arrayUnion(...fresh.map((x) => x[0]));
-  try { await updateDoc(doc(db, "users", st().me.uid), upd); } catch (e) { alert("Chưa lưu được kết quả lên hệ thống: " + errText(e)); }
-  gain = fresh.reduce((s, x) => s + x[1], 0) * (cur.ex && !cur.ex.isEng ? 2 : 1); if (gain) window.MH.addXP(gain);
+  try { await updateDoc(doc(db, "g9_users", st().me.uid), upd); } catch (e) { alert("Chưa lưu được kết quả lên hệ thống: " + errText(e)); }
+  gain = fresh.reduce((s, x) => s + x[1], 0) * (cur.ex && !cur.ex.isLesson ? 2 : 1); if (gain) window.MH.addXP(gain);
   cur.tab = "mcq"; renderChapter(); scrollTo(0, 0);
 }
 async function redo() {
   if (!confirm("Làm lại sẽ XOÁ kết quả đã lưu của chương này. Em muốn làm lại?")) return;
   RES = null; gain = 0; A = DRAFT[cur.id] = emptyA(); if (cur.ex) cur.endAt = cur.ex.minutes ? Date.now() + cur.ex.minutes * 60000 : 0; cur.tab = "mcq"; renderChapter(); scrollTo(0, 0);
-  try { await updateDoc(doc(db, "users", st().me.uid), { [`res.${cur.id}`]: deleteField() }); } catch (e) {}
+  try { await updateDoc(doc(db, "g9_users", st().me.uid), { [`res.${cur.id}`]: deleteField() }); } catch (e) {}
 }
 $("chapter-view").addEventListener("click", (e) => {
   const b = e.target.closest("[data-act]"); if (!b) return; const a = b.dataset.act, ch = curCh(), qid = b.dataset.id;
   if (a === "tab") { cur.tab = b.dataset.t; renderChapter(); }
-  else if (a === "submit") submit(); else if (a === "redo") redo(); else if (a === "back") window.dispatchEvent(new Event("mh-eng-back"));
+  else if (a === "submit") submit(); else if (a === "redo") redo(); else if (a === "back") openChapter(cur.ex.ch);
   else if (a === "mc" && !RES) { A.m[qid] = +b.dataset.i; $(`q-${qid}`).querySelectorAll("button").forEach((x, k) => (x.className = optCls(k === A.m[qid]))); refreshBar(); }
   else if (a === "tf" && !RES) { const q = ch.tf.find((x) => x.id === qid), j = +b.dataset.j; (A.t[qid] ||= q.items.map(() => null))[j] = b.dataset.v === "1";
     $(`q-${qid}-${j}`).querySelectorAll("button").forEach((x) => (x.className = optCls(A.t[qid][j] === (x.dataset.v === "1"), 0, 0, 1))); refreshBar(); }
@@ -123,7 +140,7 @@ $("chapter-view").addEventListener("click", (e) => {
 $("chapter-view").addEventListener("input", (e) => { if (e.target.dataset.act === "sain" && !RES) { A.s[e.target.dataset.id] = e.target.value; refreshBar(); } });
 const thumb = (g) => (typeof g.thumb === "string" && g.thumb.startsWith("data:image/jpeg;base64,") ? `<img src="${g.thumb}" class="w-full h-full object-cover">` : `<span class="text-5xl">🎮</span>`);
 function listenGames(id) {
-  unsubG = onSnapshot(query(collection(db, "games"), where("ch", "==", id)), (s) => {
+  unsubG = onSnapshot(query(collection(db, "g9_games"), where("ch", "==", id)), (s) => {
     const list = $("game-list"); if (!list) return; GAMES = {}; s.docs.forEach((d) => (GAMES[d.id] = d.data()));
     list.innerHTML = s.docs.map((d) => `<button data-act="play" data-id="${d.id}" class="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition"><div class="aspect-video bg-gradient-to-br from-brand-100 to-amber-100 flex items-center justify-center">${thumb(d.data())}</div><div class="p-3 font-bold text-sm">🎮 ${esc(d.data().title)}</div></button>`).join("") || `<p class="text-sm text-slate-500">Cô chưa đăng game cho chương này.</p>`;
   });
@@ -134,20 +151,20 @@ const dl = (name, text) => { const a = document.createElement("a"); a.href = URL
 function renderTeacher() {
   unsubT?.(); if (st().role !== "teacher") return;
   $("teacher-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700"><i class="fa-solid fa-chalkboard-user mr-2"></i>Quản lý của cô</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
-   <div class="flex gap-2">${[["hs", "Tài khoản học sinh"], ["ex", "Đề thi"], ["en", "Tiếng Anh"], ["qb", "Ngân hàng câu hỏi"], ["gm", "Game theo chương"]].map(([k, l]) => `<button data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === tTab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}</button>`).join("")}</div><div id="t-body"></div>`;
+   <div class="flex gap-2">${[["hs", "Tài khoản học sinh"], ["ex", "Đề thi"], ["ls", "Bài tập theo chương"], ["gm", "Game theo chương"]].map(([k, l]) => `<button data-t="${k}" class="px-4 py-2 rounded-xl text-sm font-extrabold ${k === tTab ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-600"}">${l}</button>`).join("")}</div><div id="t-body"></div>`;
   $("teacher-view").querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => { tTab = b.dataset.t; renderTeacher(); }));
-  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else if (tTab === "en") import("./eng.js?v=3").then((m) => { if (tTab === "en") unsubT = m.teacherEnglish($("t-body")); }).catch((e) => { $("t-body").innerHTML = `<p class="text-sm text-red-600 font-bold">Không tải được eng.js (${esc(e.message)}). Hãy kiểm tra đã tải eng.js và vocab.json lên GitHub.</p>`; }); else if (tTab === "ex") import("./exams.js?v=4").then((m) => { if (tTab === "ex") unsubT = m.teacherExams($("t-body")); }).catch((e) => { $("t-body").innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"><b>Chưa tải được phần Đề thi:</b> ${esc(e.message)}<br>Cô kiểm tra trên GitHub đã có đủ các file <b>exams.js, docparse.js, editor.js, learn.js, mh.js, index.html</b> chưa (tên đúng nguyên, không có số trong ngoặc), rồi nhấn Cmd+Shift+R.</div>`; }); else import("./editor.js?v=3").then((m) => m.mount($("t-body"), { CH, norm, db, esc }));
+  if (tTab === "hs") teacherStudents(); else if (tTab === "gm") teacherGames(); else if (tTab === "ex") import("./exams.js?v=4").then((m) => { if (tTab === "ex") unsubT = m.teacherExams($("t-body")); }).catch((e) => { $("t-body").innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"><b>Chưa tải được phần Đề thi:</b> ${esc(e.message)}<br>Cô kiểm tra trên GitHub đã có đủ các file <b>exams.js, docparse.js, editor.js, learn.js, mh.js, index.html</b> chưa (tên đúng nguyên, không có số trong ngoặc), rồi nhấn Cmd+Shift+R.</div>`; }); else import("./lessons.js?v=1").then((m) => { if (tTab === "ls") unsubT = m.teacherLessons($("t-body"), CH); }).catch((e) => { $("t-body").innerHTML = `<p class="text-sm text-red-600 font-bold">Không tải được lessons.js (${esc(e.message)}). Hãy kiểm tra đã tải file lên GitHub.</p>`; });
 }
 function teacherStudents() {
   $("t-body").innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 mb-3">🔒 Mật khẩu của HS được Firebase mã hoá nên <b>không ai xem được</b> (kể cả cô). Khi em quên mật khẩu, bấm <b>Gửi mail đặt lại</b>: em nhận email và tự đặt mật khẩu mới.</div>
    <div class="flex gap-2 mb-2"><input id="t-q" placeholder="Tìm theo tên, lớp, trường, email..." class="${INP}"><button id="t-csv" class="bg-brand-600 text-white font-bold rounded-xl px-4 text-sm whitespace-nowrap">Xuất Excel (CSV)</button></div>
    <div class="overflow-x-auto bg-white border border-slate-200 rounded-2xl"><table class="w-full text-xs"><thead class="bg-slate-50 text-slate-500"><tr><th class="p-2 text-left">Họ và tên</th><th class="p-2">Lớp</th><th class="p-2 text-left">Trường</th><th class="p-2 text-left">Email</th><th class="p-2">XP</th><th class="p-2">Đã làm</th><th class="p-2">Bài đã nộp</th><th class="p-2"></th></tr></thead><tbody id="t-rows"></tbody></table></div>`;
   let rows = [], draw = () => { const f = $("t-q").value.toLowerCase();
-    $("t-rows").innerHTML = rows.filter((u) => [u.name, u.cls, u.school, u.email].join(" ").toLowerCase().includes(f)).map((u) => `<tr class="border-t"><td class="p-2 font-bold"><img src="${esc(window.MH.okAvatar(u.avatar))}" class="w-6 h-6 rounded-full inline mr-1">${esc(u.name)}</td><td class="p-2 text-center">${esc(u.cls)}</td><td class="p-2">${esc(u.school)}</td><td class="p-2">${esc(u.email)}</td><td class="p-2 text-center font-bold">${u.xp || 0}</td><td class="p-2 text-center">${(u.done || []).length}</td><td class="p-2 text-center">${(() => { const r = Object.values(u.res || {}); return r.length ? r.length + " bài · TB " + f((r.reduce((a, x) => a + (x.sc.maxTot ? (x.sc.tot / x.sc.maxTot) * 10 : 0), 0)) / r.length) + "/10" : "—"; })()}</td><td class="p-2"><button data-mail="${esc(u.email)}" class="border rounded-lg px-2 py-1 whitespace-nowrap">Gửi mail đặt lại</button></td></tr>`).join("") || `<tr><td class="p-3 text-slate-500" colspan="8">Chưa có học sinh nào.</td></tr>`; };
-  unsubT = onSnapshot(collection(db, "users"), (s) => { rows = s.docs.map((d) => d.data()).filter((u) => u.role !== "teacher" && (u.email || "").toLowerCase() !== "hhn.hnue@gmail.com").sort((a, b) => (a.cls || "").localeCompare(b.cls || "") || (a.name || "").localeCompare(b.name || "")); draw(); });
+    $("t-rows").innerHTML = rows.filter((u) => [u.name, u.cls, u.school, u.email].join(" ").toLowerCase().includes(f)).map((u) => `<tr class="border-t"><td class="p-2 font-bold"><img src="${esc(window.MH.okAvatar(u.avatar))}" class="w-6 h-6 rounded-full inline mr-1">${esc(u.name)}</td><td class="p-2 text-center">${esc(u.cls)}</td><td class="p-2">${esc(u.school)}</td><td class="p-2">${esc(u.username || u.email)}</td><td class="p-2 text-center font-bold">${u.xp || 0}</td><td class="p-2 text-center">${(u.done || []).length}</td><td class="p-2 text-center">${(() => { const r = Object.values(u.res || {}); return r.length ? r.length + " bài · TB " + f((r.reduce((a, x) => a + (x.sc.maxTot ? (x.sc.tot / x.sc.maxTot) * 10 : 0), 0)) / r.length) + "/10" : "—"; })()}</td><td class="p-2">${(u.email || "").endsWith("@hs.example.com") ? `<span class="text-[10px] text-slate-400">tên đăng nhập</span>` : `<button data-mail="${esc(u.email)}" class="border rounded-lg px-2 py-1 whitespace-nowrap">Gửi mail đặt lại</button>`}</td></tr>`).join("") || `<tr><td class="p-3 text-slate-500" colspan="8">Chưa có học sinh nào.</td></tr>`; };
+  unsubT = onSnapshot(collection(db, "g9_users"), (s) => { rows = s.docs.map((d) => d.data()).filter((u) => u.role !== "teacher" && (u.email || "").toLowerCase() !== "hhn.hnue@gmail.com").sort((a, b) => (a.cls || "").localeCompare(b.cls || "") || (a.name || "").localeCompare(b.name || "")); draw(); });
   $("t-q").oninput = draw;
   $("t-rows").onclick = (e) => { const m = e.target.dataset.mail; if (m) sendPasswordResetEmail(auth, m).then(() => alert("Đã gửi yêu cầu tới " + m + ". Nhắc em kiểm tra cả mục Thư rác (Spam); thư có thể đến chậm vài phút.")).catch((x) => alert(errText(x))); };
-  $("t-csv").onclick = () => dl("hoc-sinh-math-hero-8.csv", "Họ và tên,Lớp,Trường,Email,XP\n" + rows.map((u) => [u.name, u.cls, u.school, u.email, u.xp || 0].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n"));
+  $("t-csv").onclick = () => dl("hoc-sinh-math-hero-9.csv", "Họ và tên,Lớp,Trường,Email,XP\n" + rows.map((u) => [u.name, u.cls, u.school, u.username || u.email, u.xp || 0].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n"));
 }
 const thumbOf = (f) => new Promise((ok) => { const img = new Image(); img.onload = () => { const c = document.createElement("canvas"); c.width = 480; c.height = 270; const r = Math.max(480 / img.width, 270 / img.height), w = img.width * r, h = img.height * r;
   c.getContext("2d").drawImage(img, (480 - w) / 2, (270 - h) / 2, w, h); ok(c.toDataURL("image/jpeg", 0.7)); }; img.src = URL.createObjectURL(f); });
@@ -169,17 +186,17 @@ function teacherGames() {
     let html = null; if (f) { html = await f.text(); if (new Blob([html]).size > 950000) return (m.textContent = "File quá lớn (tối đa ~900KB). Hãy dùng link."); Object.assign(data, { kind: "html" }); }
     else if (/^https:\/\//.test(url)) Object.assign(data, { kind: "link", url }); else if (!editG) return (m.textContent = "Dán link bắt đầu bằng https:// hoặc chọn file .html.");
     else if (url) return (m.textContent = "Link phải bắt đầu bằng https://");
-    try { let gid = editG; if (editG) await updateDoc(doc(db, "games", editG), data); else gid = (await addDoc(collection(db, "games"), { ...data, createdAt: Date.now() })).id;
-      if (html != null) await setDoc(doc(db, "gamehtml", gid), { html });
+    try { let gid = editG; if (editG) await updateDoc(doc(db, "g9_games", editG), data); else gid = (await addDoc(collection(db, "g9_games"), { ...data, createdAt: Date.now() })).id;
+      if (html != null) await setDoc(doc(db, "g9_gamehtml", gid), { html });
       reset(); m.className = "text-xs font-bold text-green-700"; m.textContent = "Đã lưu. HS thấy ngay trong chương."; } catch (e) { m.textContent = errText(e); }
   };
-  unsubT = onSnapshot(collection(db, "games"), (s) => {
+  unsubT = onSnapshot(collection(db, "g9_games"), (s) => {
     GAMES = {}; s.docs.forEach((d) => (GAMES[d.id] = d.data()));
     $("tg-list").innerHTML = s.docs.sort((a, b) => a.data().ch - b.data().ch || a.data().createdAt - b.data().createdAt).map((d) => { const g = d.data(); return `<div class="bg-white border border-slate-200 rounded-2xl p-3 flex items-center gap-3 text-sm"><div class="w-24 aspect-video rounded-lg overflow-hidden bg-brand-50 flex items-center justify-center shrink-0">${thumb(g)}</div><div class="flex-1 min-w-0"><span class="text-[10px] font-extrabold bg-brand-100 text-brand-700 rounded-full px-2 py-0.5">Chương ${g.ch}</span><div class="font-bold truncate">${esc(g.title)} <i class="text-slate-400 text-xs">${g.kind === "html" ? "HTML" : "Link"}</i></div></div><button data-p="${d.id}" class="text-xs border rounded-lg px-2 py-1">Xem thử</button><button data-e="${d.id}" class="text-xs border rounded-lg px-2 py-1">Sửa</button><button data-d="${d.id}" class="text-xs border rounded-lg px-2 py-1 text-red-600">Xoá</button></div>`; }).join("") || `<p class="text-sm text-slate-500">Chưa có game nào.</p>`;
   });
   $("tg-list").onclick = (e) => { const p = e.target.dataset.p, d = e.target.dataset.d, ed = e.target.dataset.e;
     if (p) playOf(GAMES[p], p);
-    if (d && confirm("Xoá game này?")) { deleteDoc(doc(db, "games", d)); deleteDoc(doc(db, "gamehtml", d)).catch(() => {}); }
+    if (d && confirm("Xoá game này?")) { deleteDoc(doc(db, "g9_games", d)); deleteDoc(doc(db, "g9_gamehtml", d)).catch(() => {}); }
     if (ed) { const g = GAMES[ed]; reset(); editG = ed; $("tg-ch").value = g.ch; $("tg-title").value = g.title; $("tg-url").value = g.kind === "link" ? g.url : ""; $("tg-head").textContent = "Sửa game (chọn ảnh/link/file mới nếu muốn đổi)"; $("tg-add").textContent = "Lưu thay đổi"; $("tg-cancel").classList.remove("hidden"); scrollTo(0, 0); } };
 }
 $("btn-teacher").onclick = async () => { await loadQ(); openView("teacher-view"); renderTeacher(); };
@@ -188,7 +205,7 @@ $("btn-teacher").onclick = async () => { await loadQ(); openView("teacher-view")
 // ---------- Mở game (HTML lưu riêng để trang chủ tải nhẹ) ----------
 async function playOf(g, id) {
   if (g.kind === "link") return open(g.url, "_blank", "noopener");
-  let html = g.html; if (!html) { try { html = (await getDoc(doc(db, "gamehtml", id))).data().html; } catch (e) { return alert("Chưa tải được game, em thử lại nhé."); } }
+  let html = g.html; if (!html) { try { html = (await getDoc(doc(db, "g9_gamehtml", id))).data().html; } catch (e) { return alert("Chưa tải được game, em thử lại nhé."); } }
   playGame(g.title, html);
 }
 // ---------- Game ngoài trang chủ ----------
@@ -196,7 +213,7 @@ let dgUid, unsubD, DG = {};
 function dashGames() {
   unsubD?.(); const box = $("dash-games-list");
   if (!st().me) { box.innerHTML = `<button id="dg-login" class="col-span-full bg-white border border-dashed border-brand-300 rounded-2xl p-5 text-sm font-bold text-brand-700">Đăng nhập để xem và chơi các game cô đã đăng →</button>`; return; }
-  unsubD = onSnapshot(query(collection(db, "games"), orderBy("createdAt", "desc"), limit(8)), (s) => {
+  unsubD = onSnapshot(query(collection(db, "g9_games"), orderBy("createdAt", "desc"), limit(8)), (s) => {
     DG = {}; s.docs.forEach((d) => (DG[d.id] = d.data()));
     box.innerHTML = s.docs.map((d) => `<button data-dg="${d.id}" class="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition"><div class="aspect-video bg-gradient-to-br from-brand-100 to-amber-100 flex items-center justify-center">${thumb(d.data())}</div><div class="p-3"><div class="text-[10px] font-extrabold text-brand-600">Chương ${d.data().ch}</div><div class="font-bold text-sm">${esc(d.data().title)}</div></div></button>`).join("") || `<p class="text-sm text-slate-500 col-span-full">Cô chưa đăng game nào.</p>`;
   }, () => (box.innerHTML = `<p class="text-sm text-slate-500 col-span-full">Chưa tải được game.</p>`));
@@ -221,12 +238,12 @@ function renderNotes() {
 $("notes-view").addEventListener("click", async (e) => {
   const t = e.target, id = t.id, ne = t.dataset.ne, nd = t.dataset.nd;
   if (id === "nt-save") { const title = $("nt-title").value.trim(), text = $("nt-text").value.trim(); if (!text) return ($("nt-msg").textContent = "Nhập nội dung dặn dò.");
-    try { if (editN) await updateDoc(doc(db, "notes", editN), { title, text, updatedAt: Date.now() }); else await addDoc(collection(db, "notes"), { title, text, createdAt: Date.now() }); editN = null; renderNotes(); } catch (x) { $("nt-msg").textContent = errText(x); } }
+    try { if (editN) await updateDoc(doc(db, "g9_notes", editN), { title, text, updatedAt: Date.now() }); else await addDoc(collection(db, "g9_notes"), { title, text, createdAt: Date.now() }); editN = null; renderNotes(); } catch (x) { $("nt-msg").textContent = errText(x); } }
   if (id === "nt-cancel") { editN = null; renderNotes(); }
   if (ne) { editN = ne; renderNotes(); scrollTo(0, 0); }
-  if (nd && confirm("Xoá dặn dò này?")) deleteDoc(doc(db, "notes", nd));
+  if (nd && confirm("Xoá dặn dò này?")) deleteDoc(doc(db, "g9_notes", nd));
 });
-onSnapshot(query(collection(db, "notes"), orderBy("createdAt", "desc")), (s) => { NOTES = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderNoteCard(); if (!$("notes-view").classList.contains("hidden")) renderNotes(); }, () => {});
+onSnapshot(query(collection(db, "g9_notes"), orderBy("createdAt", "desc")), (s) => { NOTES = s.docs.map((d) => ({ id: d.id, ...d.data() })); renderNoteCard(); if (!$("notes-view").classList.contains("hidden")) renderNotes(); }, () => {});
 const openNotes = () => { editN = null; openView("notes-view"); renderNotes(); };
 $("btn-notes").onclick = openNotes; window.addEventListener("mh-notes", openNotes);
 
@@ -236,17 +253,18 @@ const bar = (p, cls = "bg-brand-500") => `<div class="h-2 rounded-full bg-slate-
 async function openProgress() {
   if (!st().me) return window.MH.openAuth("login");
   await loadQ(); openView("progress-view"); $("progress-view").innerHTML = `<p class="text-sm text-slate-500">Đang tải bài học của em...</p>`;
-  try { (await getDocs(collection(db, "qpub"))).forEach((p) => { const id = +p.id; CH[id - 1] = norm({ ...CH[id - 1], ...p.data(), id }); }); } catch (e) {}
-  const { prof } = st(), dn = new Set(prof.done || []), seen = prof.seen || {};
-  const rows = CH.map((c) => { const v = validKeys(c), n = { m: v.m.filter((k) => dn.has(k)).length, t: v.t.filter((k) => dn.has(k)).length, s: v.s.filter((k) => dn.has(k)).length };
-    const t = { m: v.m.length, t: v.t.length, s: v.s.length }, sum = n.m + n.t + n.s, all = t.m + t.t + t.s; return { c, n, t, sum, all, pct: all ? Math.round((100 * sum) / all) : 0, at: seen[c.id] || 0, res: (prof.res || {})[c.id] }; });
+  let LS = []; try { LS = (await getDocs(query(collection(db, "g9_lessons"), where("published", "==", true)))).docs.map((d) => ({ id: d.id, ...d.data() })); } catch (e) {}
+  const { prof } = st(), dn = new Set(prof.done || []), seen = prof.seen || {}, res = prof.res || {};
+  const rows = CH.map((c) => { const ls = LS.filter((x) => x.ch === c.id).sort((a, b) => a.createdAt - b.createdAt); let sum = 0, all = 0, sub = 0;
+    ls.forEach((x) => { const v = validKeys({ id: "l_" + x.id, mcq: x.mcq || [], tf: x.tf || [], sa: x.sa || [] }), ks = [...v.m, ...v.t, ...v.s]; all += ks.length; sum += ks.filter((k) => dn.has(k)).length; if (res["l_" + x.id]) sub++; });
+    return { c, ls, sum, all, sub, pct: all ? Math.round((100 * sum) / all) : 0, at: seen[c.id] || 0 }; });
   const tot = rows.reduce((a, r) => a + r.sum, 0), allQ = rows.reduce((a, r) => a + r.all, 0), pctAll = allQ ? Math.round((100 * tot) / allQ) : 0;
   const cardP = (r) => `<div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2"><div class="flex items-start justify-between gap-2"><div class="font-bold text-sm">Chương ${r.c.id}: ${esc(r.c.title)}</div><span class="text-xs font-black ${r.pct === 100 ? "text-green-600" : "text-brand-600"}">${r.pct}%</span></div>${bar(r.pct, r.pct === 100 ? "bg-green-500" : "bg-brand-500")}
-    <div class="text-[11px] text-slate-500">Trắc nghiệm ${r.n.m}/${r.t.m} · Đúng–Sai ${r.n.t}/${r.t.t} · Trả lời ngắn ${r.n.s}/${r.t.s}</div>
-    ${r.res ? `<div class="text-[11px] font-bold text-brand-700">Điểm đã nộp: ${f(r.res.sc.tot)}/${f(r.res.sc.maxTot)}</div>` : ""}<div class="flex items-center justify-between"><span class="text-[10px] text-slate-400">${r.at ? "Lần cuối: " + new Date(r.at).toLocaleDateString("vi-VN") : ""}</span><button data-go="${r.c.id}" class="bg-brand-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">${r.pct === 100 ? "Ôn lại" : r.at || r.pct ? "Tiếp tục" : "Bắt đầu"}</button></div></div>`;
-  const doing = rows.filter((r) => r.pct < 100 && (r.pct > 0 || r.at)).sort((a, b) => b.at - a.at), fin = rows.filter((r) => r.pct === 100), fresh = rows.filter((r) => r.pct === 0 && !r.at);
-  const sec = (t, a) => (a.length ? `<h3 class="font-extrabold text-slate-700 mt-2">${t} (${a.length})</h3><div class="grid sm:grid-cols-2 gap-3">${a.map(cardP).join("")}</div>` : "");
-  const last = rows[(prof.lastCh || 0) - 1];
+    <div class="text-[11px] text-slate-500">${r.ls.length ? `Đã nộp ${r.sub}/${r.ls.length} bài · đúng ${r.sum}/${r.all} câu` : "Cô chưa đăng bài tập"}</div>
+    ${r.ls.map((x) => { const q = res["l_" + x.id]; return `<div class="text-[11px] flex justify-between"><span class="truncate pr-2">${esc(x.title)}</span><b class="text-brand-700 whitespace-nowrap">${q ? f(q.sc.tot) + "/" + f(q.sc.maxTot) : "—"}</b></div>`; }).join("")}
+    <div class="flex items-center justify-between"><span class="text-[10px] text-slate-400">${r.at ? "Lần cuối: " + new Date(r.at).toLocaleDateString("vi-VN") : ""}</span><button data-go="${r.c.id}" class="bg-brand-600 text-white text-xs font-bold rounded-xl px-3 py-1.5">${r.pct === 100 ? "Ôn lại" : r.at || r.pct ? "Tiếp tục" : "Vào chương"}</button></div></div>`;
+  const doing = rows.filter((r) => r.pct < 100 && (r.pct > 0 || r.at)).sort((a, b) => b.at - a.at), fin = rows.filter((r) => r.pct === 100 && r.all), fresh = rows.filter((r) => r.pct === 0 && !r.at);
+  const sec = (t, a) => (a.length ? `<h3 class="font-extrabold text-slate-700 mt-2">${t} (${a.length})</h3><div class="grid sm:grid-cols-2 gap-3">${a.map(cardP).join("")}</div>` : ""), last = rows[(prof.lastCh || 0) - 1];
   $("progress-view").innerHTML = `<div class="flex items-center justify-between"><h2 class="font-extrabold text-xl text-brand-700"><i class="fa-solid fa-book-open mr-2"></i>Bài học của em</h2><button onclick="goHome()" class="text-sm font-bold text-slate-500">Trang chủ</button></div>
    <div class="bg-gradient-to-br from-brand-700 to-brand-600 text-white rounded-3xl p-5"><div class="text-xs font-bold opacity-80">Hoàn thành chung</div><div class="text-3xl font-black">${pctAll}%</div><div class="h-2 rounded-full bg-white/25 overflow-hidden mt-2"><div class="h-full bg-yellow-300" style="width:${pctAll}%"></div></div>
    ${last ? `<div class="mt-3 text-sm">Em đang học gần đây: <b>Chương ${last.c.id}: ${esc(last.c.title)}</b> (${last.pct}%)</div><button data-go="${last.c.id}" class="mt-2 bg-white text-brand-700 font-extrabold text-sm rounded-xl px-4 py-2">Tiếp tục học →</button>` : `<div class="mt-3 text-sm">Em chưa bắt đầu chương nào. Chọn một chương bên dưới nhé!</div>`}</div>
@@ -269,11 +287,6 @@ async function openExam(ex) {
   cur = { id, tab: "mcq", ex: norm({ ...ex, id }), endAt: had || !ex.minutes ? 0 : Date.now() + ex.minutes * 60000 };
   done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
 }
-function openEnglish(ex) {
-  const id = "x_" + ex.id; cur = { id, tab: "mcq", ex: norm({ ...ex, id, isEng: true }), endAt: 0 };
-  done = new Set(st().prof.done || []); initState(); openView("chapter-view"); renderChapter();
-}
-window.MHL = { openExam, openEnglish, norm, openView, st };
-import("./eng.js?v=3").catch((e) => console.error("eng.js", e));
+window.MHL = { openExam, norm, openView, st };
 import("./exams.js?v=4").catch((e) => console.error("exams.js", e));
 window.dispatchEvent(new Event("mh-auth"));

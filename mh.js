@@ -1,6 +1,6 @@
-// MATH HERO 8 - Bước 2: đăng ký/đăng nhập email + hồ sơ (tên, lớp, avatar) + game GV
+// MATH HERO 9 - Bước 2: đăng ký/đăng nhập email + hồ sơ (tên, lớp, avatar) + game GV
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, updateDoc, collection, addDoc, deleteDoc, increment, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -10,17 +10,17 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const dice = (style, seed) => `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
 const okAvatar = (a) => (typeof a === "string" && (a.startsWith("https://api.dicebear.com/") || a.startsWith("data:image/jpeg;base64,")) ? a : dice("bottts", "HocSinhVTS"));
 const ERR = {
-  "auth/invalid-credential": "Sai email hoặc mật khẩu.", "auth/wrong-password": "Sai mật khẩu.", "auth/user-not-found": "Email này chưa đăng ký.",
+  "auth/invalid-credential": "Sai tên đăng nhập/email hoặc mật khẩu.", "auth/wrong-password": "Sai mật khẩu.", "auth/user-not-found": "Tên đăng nhập/email này chưa có tài khoản.",
   "auth/email-already-in-use": "Email này đã đăng ký rồi, hãy chuyển sang thẻ Đăng nhập.", "auth/weak-password": "Mật khẩu cần ít nhất 6 ký tự.",
   "auth/invalid-email": "Email không hợp lệ.", "auth/missing-password": "Hãy nhập mật khẩu.", "auth/operation-not-allowed": "Chưa bật Email/Password trong Firebase Authentication.",
   "auth/unauthorized-domain": "Tên miền web chưa được thêm vào Authorized domains trong Firebase.", "auth/network-request-failed": "Mất kết nối mạng.",
   "auth/too-many-requests": "Thử quá nhiều lần, hãy đợi vài phút.", "permission-denied": "Firestore chưa cho phép ghi: kiểm tra lại Rules.",
 };
-const TEACHER_EMAIL = "hhn.hnue@gmail.com";
+const TEACHER_EMAIL = "hhn.hnue@gmail.com", HS_DOMAIN = "hs.example.com";
 const errText = (e) => ERR[e.code] || `${e.code || "Lỗi"}: ${e.message}`;
 
 let me = null, prof = {}, profExists = false, role = "student", mode = "login", lastXP = null, saveTimer, tmpAvatar = null;
-let lbTimer, streakDone = false, unsubUser, unsubGames, unsubStu, unsubLB, lbSig = "";
+let noProf, lbTimer, streakDone = false, unsubUser, unsubGames, unsubStu, unsubLB, lbSig = "";
 
 // ---------- Giao diện ----------
 const AV = [["bottts", "Rocket"], ["bottts", "Nova"], ["bottts", "Pixel"], ["adventurer", "Mai"], ["adventurer", "Nam"], ["adventurer", "Lan"],
@@ -34,7 +34,7 @@ document.body.insertAdjacentHTML("beforeend", `
    <input id="a-name" placeholder="Họ và tên của em" class="w-full border rounded-xl px-3 py-2 text-sm">
    <input id="a-cls" placeholder="Lớp (vd: 8A1)" class="w-full border rounded-xl px-3 py-2 text-sm">
    <input id="a-school" placeholder="Trường (vd: THCS Võ Thị Sáu)" class="w-full border rounded-xl px-3 py-2 text-sm"></div>
-  <input id="a-email" type="email" autocomplete="email" placeholder="Email" class="w-full border rounded-xl px-3 py-2 text-sm mb-2">
+  <input id="a-email" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Email hoặc tên đăng nhập (vd: an8a3)" class="w-full border rounded-xl px-3 py-2 text-sm mb-2">
   <input id="a-pass" type="password" autocomplete="current-password" placeholder="Mật khẩu (ít nhất 6 ký tự)" class="w-full border rounded-xl px-3 py-2 text-sm mb-2">
   <p id="a-msg" class="text-xs text-red-600 font-bold min-h-[1rem] mb-2"></p>
   <button id="a-go" class="w-full bg-brand-600 text-white font-extrabold rounded-xl py-2.5 text-sm">Đăng nhập</button>
@@ -47,6 +47,7 @@ document.body.insertAdjacentHTML("beforeend", `
   <input id="p-name" placeholder="Họ và tên" class="w-full border rounded-xl px-3 py-2 text-sm mb-2">
   <input id="p-cls" placeholder="Lớp" class="w-full border rounded-xl px-3 py-2 text-sm mb-2">
   <input id="p-school" placeholder="Trường" class="w-full border rounded-xl px-3 py-2 text-sm mb-3">
+  <div class="border-t pt-3 mb-3"><div class="text-xs font-extrabold text-slate-600 mb-1">Đổi mật khẩu</div><div class="flex gap-2"><input id="p-newpw" type="password" autocomplete="new-password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" class="flex-1 border rounded-xl px-3 py-2 text-sm"><button id="p-pw" class="bg-slate-100 font-bold rounded-xl px-3 text-sm">Đổi</button></div><p id="p-pwmsg" class="text-xs font-bold min-h-[1rem] mt-1"></p></div>
   <div class="text-xs font-extrabold text-slate-600 mb-1">Chọn ảnh đại diện</div>
   <div id="p-grid" class="grid grid-cols-6 gap-2 mb-2"></div>
   <label class="text-xs font-bold text-brand-700 cursor-pointer underline">Hoặc tải ảnh của em lên<input id="p-file" type="file" accept="image/*" class="hidden"></label>
@@ -77,7 +78,7 @@ const openAuth = (m = "login") => { if (sidebarOpen()) toggleSidebar(); setMode(
 const openProfile = () => {
   if (sidebarOpen()) toggleSidebar();
   tmpAvatar = okAvatar(prof.avatar); $("p-prev").src = tmpAvatar; $("p-name").value = prof.name || ""; $("p-cls").value = prof.cls || ""; $("p-school").value = prof.school || "";
-  $("p-email").textContent = me.email; $("p-msg").textContent = ""; show("prof-modal", true);
+  $("p-email").textContent = me.email.endsWith("@" + HS_DOMAIN) ? "Tên đăng nhập: " + me.email.split("@")[0] : me.email; $("p-pwmsg").textContent = ""; $("p-newpw").value = ""; $("p-msg").textContent = ""; show("prof-modal", true);
 };
 const entry = () => (me ? openProfile() : openAuth("login"));
 $("btn-auth").onclick = av.onclick = entry;
@@ -94,28 +95,34 @@ $("p-file").onchange = (e) => {
     c.getContext("2d").drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, 128, 128); tmpAvatar = c.toDataURL("image/jpeg", 0.8); $("p-prev").src = tmpAvatar; };
   img.src = URL.createObjectURL(f);
 };
+$("p-pw").onclick = async () => {
+  const m = $("p-pwmsg"), v = $("p-newpw").value; m.className = "text-xs font-bold min-h-[1rem] mt-1 text-red-600"; if (v.length < 6) return (m.textContent = "Mật khẩu cần ít nhất 6 ký tự.");
+  try { await updatePassword(auth.currentUser, v); $("p-newpw").value = ""; m.className = "text-xs font-bold min-h-[1rem] mt-1 text-green-700"; m.textContent = "✅ Đã đổi mật khẩu. Lần sau em đăng nhập bằng mật khẩu mới."; }
+  catch (e) { m.textContent = e.code === "auth/requires-recent-login" ? "Em hãy đăng xuất, đăng nhập lại rồi đổi mật khẩu." : errText(e); }
+};
 $("p-save").onclick = async () => {
   const name = $("p-name").value.trim().slice(0, 60); if (!name) { $("p-msg").className = "text-xs font-bold text-red-600"; return ($("p-msg").textContent = "Em hãy nhập họ tên."); }
   const data = { name, cls: $("p-cls").value.trim().slice(0, 20), school: $("p-school").value.trim().slice(0, 80), avatar: tmpAvatar };
   try {
-    if (profExists) await updateDoc(doc(db, "users", me.uid), data);
-    else await setDoc(doc(db, "users", me.uid), { ...data, email: me.email, role: "student", xp: lastXP ?? 1250 });
+    if (profExists) await updateDoc(doc(db, "g9_users", me.uid), data);
+    else await setDoc(doc(db, "g9_users", me.uid), { ...data, email: me.email, role: "student", xp: lastXP ?? 1250 });
     show("prof-modal", false);
   } catch (e) { $("p-msg").className = "text-xs font-bold text-red-600"; $("p-msg").textContent = errText(e); }
 };
 
 // ---------- Đăng ký / đăng nhập ----------
 $("a-go").onclick = async () => {
-  const email = $("a-email").value.trim(), pass = $("a-pass").value, msg = $("a-msg"), btn = $("a-go");
+  const raw = $("a-email").value.trim(), email = raw.includes("@") ? raw : raw.toLowerCase().replace(/\s+/g, "") + "@" + HS_DOMAIN, pass = $("a-pass").value, msg = $("a-msg"), btn = $("a-go");
   msg.className = "text-xs font-bold min-h-[1rem] mb-2 text-red-600"; msg.textContent = "";
-  if (!email || !pass) return (msg.textContent = "Hãy nhập email và mật khẩu.");
+  if (!raw || !pass) return (msg.textContent = "Hãy nhập tên đăng nhập (hoặc email) và mật khẩu.");
+  if (mode === "signup" && !raw.includes("@")) return (msg.textContent = "Đăng ký cần địa chỉ email. Nếu em chưa có email, hãy nhận tên đăng nhập và mật khẩu từ cô.");
   const name = $("a-name").value.trim().slice(0, 60);
   if (mode === "signup" && (!name || !$("a-cls").value.trim() || !$("a-school").value.trim())) return (msg.textContent = "Hãy nhập đủ họ tên, lớp và trường của em.");
   btn.disabled = true; const old = btn.textContent; btn.textContent = "Đang xử lý...";
   try {
     if (mode === "signup") {
       const c = await createUserWithEmailAndPassword(auth, email, pass);
-      await setDoc(doc(db, "users", c.user.uid), { name, cls: $("a-cls").value.trim().slice(0, 20), school: $("a-school").value.trim().slice(0, 80), email: c.user.email, role: email.toLowerCase() === TEACHER_EMAIL ? "teacher" : "student", xp: 1250, avatar: dice("bottts", name) });
+      await setDoc(doc(db, "g9_users", c.user.uid), { name, cls: $("a-cls").value.trim().slice(0, 20), school: $("a-school").value.trim().slice(0, 80), email: c.user.email, role: email.toLowerCase() === TEACHER_EMAIL ? "teacher" : "student", xp: 1250, avatar: dice("bottts", name) });
     } else await signInWithEmailAndPassword(auth, email, pass);
     show("auth-modal", false);
   } catch (e) { msg.textContent = errText(e); }
@@ -124,6 +131,7 @@ $("a-go").onclick = async () => {
 $("a-reset").onclick = () => {
   const m = $("a-msg"), email = $("a-email").value.trim();
   if (!email) { m.className = "text-xs font-bold text-red-600"; return (m.textContent = "Nhập email trước, rồi bấm Quên mật khẩu."); }
+  if (!email.includes("@")) { m.className = "text-xs font-bold text-red-600"; return (m.textContent = "Tài khoản tên đăng nhập không đặt lại bằng email được. Em hãy nhờ cô cấp lại mật khẩu."); }
   sendPasswordResetEmail(auth, email).then(() => { m.className = "text-xs font-bold text-green-700"; m.textContent = "Nếu email này đã đăng ký, em sẽ nhận thư trong vài phút. Hãy kiểm tra cả mục Thư rác (Spam), thư từ \"noreply@...firebaseapp.com\"."; })
     .catch((e) => { m.className = "text-xs font-bold text-red-600"; m.textContent = errText(e); });
 };
@@ -134,7 +142,7 @@ const dstr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).
 document.body.insertAdjacentHTML("beforeend", `<div id="streak-modal" class="fixed inset-0 z-[65] hidden items-center justify-center bg-slate-900/70 p-4"><div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl"><div class="text-5xl mb-2">🔥</div><h3 class="font-extrabold text-lg text-brand-700 mb-1">Em đã mất chuỗi học!</h3><p id="st-msg" class="text-sm text-slate-600 mb-4"></p><button id="st-restore" class="w-full bg-amber-400 text-brand-900 font-extrabold rounded-xl py-2.5 text-sm mb-2"></button><button id="st-reset" class="w-full bg-slate-100 font-bold rounded-xl py-2.5 text-sm">Không khôi phục, bắt đầu lại</button></div></div>`);
 async function checkStreak() {
   if (streakDone || !me || !profExists || role === "teacher") return; streakDone = true;
-  const t = dstr(), ref = doc(db, "users", me.uid), s = prof.streak || 0, last = prof.lastDay, best = (n) => Math.max(prof.bestStreak || 0, n);
+  const t = dstr(), ref = doc(db, "g9_users", me.uid), s = prof.streak || 0, last = prof.lastDay, best = (n) => Math.max(prof.bestStreak || 0, n);
   if (last === t) return;
   if (!last || s <= 0) return updateDoc(ref, { streak: 1, lastDay: t, bestStreak: best(1) }).catch(() => {});
   if (last === dstr(new Date(Date.now() - 864e5))) return updateDoc(ref, { streak: s + 1, lastDay: t, bestStreak: best(s + 1) }).catch(() => {});
@@ -152,7 +160,7 @@ new MutationObserver(() => {
   const n = parseInt($("user-xp-top").innerText.replace(/\D/g, ""), 10);
   if (isNaN(n) || n === lastXP) return;
   lastXP = n; clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { updateDoc(doc(db, "users", me.uid), { xp: n }).catch(() => {}); syncLB(); }, 800);
+  saveTimer = setTimeout(() => { updateDoc(doc(db, "g9_users", me.uid), { xp: n }).catch(() => {}); syncLB(); }, 800);
 }).observe($("user-xp-top"), { childList: true, characterData: true, subtree: true });
 
 // ---------- Bảng xếp hạng thật ----------
@@ -160,11 +168,11 @@ function syncLB() {
   if (!me || role === "teacher" || !prof.name) return;
   const d = { name: prof.name, cls: prof.cls || "", school: prof.school || "", avatar: okAvatar(prof.avatar), xp: lastXP ?? prof.xp ?? 0 };
   const sig = JSON.stringify(d); if (sig === lbSig) return; lbSig = sig;
-  setDoc(doc(db, "leaderboard", me.uid), { ...d, updatedAt: Date.now() }).catch(() => (lbSig = ""));
+  setDoc(doc(db, "g9_leaderboard", me.uid), { ...d, updatedAt: Date.now() }).catch(() => (lbSig = ""));
 }
 function listenLB() {
   unsubLB?.();
-  unsubLB = onSnapshot(query(collection(db, "leaderboard"), orderBy("xp", "desc"), limit(10)), (s) => {
+  unsubLB = onSnapshot(query(collection(db, "g9_leaderboard"), orderBy("xp", "desc"), limit(10)), (s) => {
     const sty = ["bg-amber-50/60 border border-amber-200", "bg-slate-50 border border-slate-200", "bg-orange-50/60 border border-orange-200"], dot = ["bg-amber-400 text-white", "bg-slate-300 text-slate-700", "bg-orange-300 text-white"];
     $("lb-list").innerHTML = s.docs.map((d, i) => { const u = d.data(), self = me && d.id === me.uid;
       return `<div class="flex items-center justify-between p-3 rounded-2xl ${self ? "bg-brand-50 border-2 border-brand-500" : sty[i] || "bg-white border border-slate-200"}">
@@ -189,15 +197,16 @@ onAuthStateChanged(auth, (u) => {
   $("btn-auth").classList.toggle("hidden", !!u);
   $("btn-auth2-t").textContent = u ? "Bài học của em" : "Đăng nhập bằng email"; $("btn-auth2-i").className = "fa-solid " + (u ? "fa-book-open" : "fa-user");
   if (!u) { prof = {}; profExists = false; role = "student"; lastXP = null; render(); $("lb-list").innerHTML = `<p class="text-xs text-slate-500">Đăng nhập để xem bảng xếp hạng.</p>`; return; }
-  unsubUser = onSnapshot(doc(db, "users", u.uid), (s) => {
+  unsubUser = onSnapshot(doc(db, "g9_users", u.uid), (s) => {
     profExists = s.exists(); prof = s.data() || {}; role = prof.role === "teacher" || (u.email || "").toLowerCase() === TEACHER_EMAIL ? "teacher" : "student";
-    if (role === "teacher") deleteDoc(doc(db, "leaderboard", u.uid)).catch(() => {});
+    if (role === "teacher") deleteDoc(doc(db, "g9_leaderboard", u.uid)).catch(() => {});
     if (prof.xp != null && prof.xp !== lastXP) setXP(prof.xp);
     render(); syncLB(); checkStreak();
+    clearTimeout(noProf); if (!profExists) noProf = setTimeout(() => { if (me && !profExists) openProfile(); }, 2500);
     if (profExists && !prof.name) openProfile();
   });
   listenLB();
 });
 
-window.MH = { db, auth, esc, okAvatar, errText, openAuth, state: () => ({ me, prof, role }), addXP: (n) => { setXP((lastXP ?? prof.xp ?? 0) + n); updateDoc(doc(db, "users", me.uid), { xp: increment(n) }).catch(() => {}); clearTimeout(lbTimer); lbTimer = setTimeout(syncLB, 600); } };
-import("./learn.js?v=12").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
+window.MH = { db, auth, esc, okAvatar, errText, openAuth, hsDomain: HS_DOMAIN, state: () => ({ me, prof, role }), addXP: (n) => { setXP((lastXP ?? prof.xp ?? 0) + n); updateDoc(doc(db, "g9_users", me.uid), { xp: increment(n) }).catch(() => {}); clearTimeout(lbTimer); lbTimer = setTimeout(syncLB, 600); } };
+import("./learn.js?v=11").catch((e) => { console.error(e); const l = $("chap-list"); if (l) l.innerHTML = `<p class="px-3 text-xs text-red-600">Không tải được danh sách chương: ${esc(e.message)}. Hãy kiểm tra đã tải đủ file learn.js, editor.js, questions.json lên GitHub.</p>`; });
