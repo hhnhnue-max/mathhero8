@@ -7,7 +7,7 @@ export async function mount(root, { CH, norm, db, esc, exam }) {
   let id = 1, d = null, msg = "", pubAt = null;
   const take = (x) => ({ mcq: x.mcq, tf: x.tf, sa: x.sa });
   async function load(i, orig) {
-    if (exam) { const sn = await getDoc(doc(db, exam.col || "g9_exams", exam.id)); d = norm(clone(take(sn.data()))); pubAt = null; msg = ""; return paint(); }
+    if (exam) { const sn = await getDoc(doc(db, exam.col || "exams", exam.id)); d = norm(clone(take(sn.data()))); pubAt = null; msg = ""; return paint(); }
     id = i; msg = "Đang tải..."; paint();
     const [dr, pb] = await Promise.all([getDoc(doc(db, "qdraft", String(i))), getDoc(doc(db, "qpub", String(i)))]);
     pubAt = pb.exists() ? pb.data().updatedAt : null;
@@ -26,7 +26,7 @@ export async function mount(root, { CH, norm, db, esc, exam }) {
   async function save(publish) {
     const bad = check(); if (bad) { msg = "⚠️ " + bad; return paint(); }
     if (publish && !confirm("Công bố bộ câu hỏi Chương " + id + " cho tất cả học sinh?")) return;
-    if (exam) { try { await updateDoc(doc(db, exam.col || "g9_exams", exam.id), { ...pack(), ...(publish ? { published: true } : {}) }); msg = publish ? "✅ Đã công bố đề cho học sinh." : "💾 Đã lưu thay đổi."; } catch (x) { msg = "Lỗi: " + (x.code || x.message); } return paint(); }
+    if (exam) { try { await updateDoc(doc(db, exam.col || "exams", exam.id), { ...pack(), ...(publish ? { published: true } : {}) }); msg = publish ? "✅ Đã công bố đề cho học sinh." : "💾 Đã lưu thay đổi."; } catch (x) { msg = "Lỗi: " + (x.code || x.message); } return paint(); }
     try { const p = pack(); await setDoc(doc(db, "qdraft", String(id)), p); if (publish) { await setDoc(doc(db, "qpub", String(id)), p); pubAt = p.updatedAt; } msg = publish ? "✅ Đã công bố. HS mở chương sẽ thấy bộ câu hỏi mới." : "💾 Đã lưu nháp (HS chưa thấy)."; }
     catch (e) { msg = "Lỗi: " + (e.code || e.message); } paint();
   }

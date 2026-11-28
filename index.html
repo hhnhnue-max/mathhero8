@@ -360,7 +360,7 @@
         function showSection(section) {
             const dashView = document.getElementById('dashboard-view');
             const quizView = document.getElementById('quiz-view');
-            ['chapter-view','teacher-view','progress-view','notes-view','exams-view','eng-view'].forEach(i => { const e = document.getElementById(i); if (e) e.classList.add('hidden'); });
+            ['chapter-view','teacher-view','progress-view','notes-view','exams-view','eng-view','hub-view'].forEach(i => { const e = document.getElementById(i); if (e) e.classList.add('hidden'); });
             
             if (section === 'dashboard') {
                 dashView.classList.remove('hidden');
@@ -456,6 +456,6 @@
             });
         }
     </script>
-<script type="module" src="./mh.js?v=16"></script>
+<script type="module" src="./mh.js?v=17"></script>
 </body>
 </html>

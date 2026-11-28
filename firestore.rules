@@ -59,6 +59,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if isTeacher();
     }
+    match /lessons/{id} {
+      allow read: if request.auth != null && (resource.data.published == true || isTeacher());
+      allow write: if isTeacher();
+    }
     // ===== Website Toán 9 (dữ liệu tách riêng, tiền tố g9_) =====
     function isTeacher9() {
       return request.auth != null && request.auth.token.email == 'hhn.hnue@gmail.com';
